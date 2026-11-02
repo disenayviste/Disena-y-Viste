@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><base target="_top">
+<style>
+/* ===== TEMA: cambia aquí los colores de tu marca y el logo ===== */
+:root{--c1:#111;--c2:#e6007e;--c3:#ffd23f;--bg:#f7f6fa;--card:#fff;--tx:#161421;--mu:#6e6a82;--bd:#e4e1ee;--ok:#17a36b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.hero{background:linear-gradient(135deg,#111,#2b1740);color:#fff;padding:24px 16px 44px;text-align:center}
+.hero img{max-height:70px}.hero h1{margin:0;font-size:28px}.hero h1 b{color:var(--c3)}.hero p{margin:6px 0 0;opacity:.85}
+.w{max-width:960px;margin:-28px auto 30px;padding:0 14px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 4px 18px #1114}
+h2{margin:0 0 12px;font-size:18px}h2:before{content:"";display:inline-block;width:8px;height:18px;background:var(--c2);border-radius:4px;margin-right:8px;vertical-align:-3px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.f{grid-column:1/-1}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--bd);border-radius:10px;font:inherit;background:#fff;color:var(--tx)}
+.b{border:0;background:var(--c2);color:#fff;padding:10px 16px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer}
+.b.o{background:#fff;color:#111;border:1px solid var(--bd)}.b.on{background:#111;color:#fff}.b.s{padding:5px 10px;font-size:13px}.b:disabled{opacity:.5}
+.r{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center}.r>*{flex:1 1 120px;min-width:0}.r .x{flex:0 0 auto}
+.m{padding:10px 12px;border-radius:10px;background:#ffd23f33;margin-top:10px}.er{background:#ff3b5c22;color:#b0102c}
+.tot{background:#111;color:#fff;border-radius:12px;padding:12px;font-size:16px}.tot b{color:var(--c3)}
+.code{font-weight:800;color:var(--c2);font-size:17px}.mu{color:var(--mu);font-size:13px}
+.steps{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.st{flex:1 1 100px;padding:6px 3px;border-radius:8px;background:var(--bg);border:1px solid var(--bd);font-size:12px;text-align:center;color:var(--mu)}
+.st.d{background:var(--ok);color:#fff;border-color:var(--ok)}.st.n{background:var(--c2);color:#fff;border-color:var(--c2);font-weight:700}.st small{display:block}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 14px;margin:8px 0}.info b{display:block;font-size:12px;color:var(--mu);font-weight:500}
+.th{width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--bd)}
+.li{display:inline-block;text-align:center;margin:0 8px 6px 0;font-size:12px;max-width:100px}
+.pay{background:#f3f0fa;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:14px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}.k div{background:#111;color:#fff;border-radius:12px;padding:12px}.k b{display:block;font-size:20px;color:var(--c3)}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px;border-bottom:1px solid var(--bd);text-align:left}
+.hide{display:none}#mo{position:fixed;inset:0;background:#000a;z-index:9;overflow:auto;padding:10px}
+footer{text-align:center;padding:10px}footer a{color:var(--mu);font-size:13px;cursor:pointer}details{margin-top:6px}
+</style></head><body>
+<div class="hero"><!-- <img src="URL_DE_TU_LOGO"> --><h1>Diseña <b>&amp;</b> Viste</h1><p>Camisas personalizadas con impresión DTF</p></div>
+<div class="w">
+<div id="pub"><div class="c"><h2>Haz tu pedido</h2><div id="pf">Cargando…</div><div id="pm"></div></div>
+ <div class="c"><h2>Consulta tu pedido</h2><div class="r"><input id="qc" placeholder="Código, ej. DV-AB12C"><button class="b" id="qb">Consultar</button></div><div id="qr"></div></div>
+ <footer><a id="goS">Acceso empleados</a></footer></div>
+<div id="stf" class="hide">
+ <div id="lg" class="c"><h2>Portal de empleados</h2><div class="g"><div><label>Nombre</label><input id="ln" placeholder="Nombre y apellido"></div><div><label>PIN</label><input id="lp" type="password"></div></div>
+  <div class="r" style="margin-top:10px"><button class="b" id="lb">Entrar</button><button class="b o" id="lv">Volver</button></div><div id="lm"></div></div>
+ <div id="pt" class="hide">
+  <div class="r"><button class="b on" data-v="v1">Pedidos</button><button class="b o" data-v="v2">Nuevo pedido</button><button class="b o adm" data-v="v3">Reporte financiero</button><button class="b o adm" data-v="v4">Empleados</button><button class="b o s" id="lo" style="flex:0 0 auto">Salir</button></div>
+  <div id="v1"><div class="r"><input id="bq" placeholder="Buscar cliente o código"><select id="fl"></select><select id="fr"></select><button class="b o s" id="rf" style="flex:0 0 auto">Actualizar</button></div><div class="mu" id="ct"></div><div id="ls"></div></div>
+  <div id="v2" class="hide"><div class="c"><h2>Nuevo pedido</h2><div id="sf"></div><div id="sm"></div></div></div>
+  <div id="v3" class="hide"><div class="c"><h2>Reporte financiero</h2><div class="r"><div><label>Desde</label><input type="date" id="rd"></div><div><label>Hasta</label><input type="date" id="rh"></div></div><div id="rp"></div></div></div>
+  <div id="v4" class="hide"><div class="c"><h2>Empleados</h2><div class="r"><input id="an" placeholder="Nombre y apellido"><input id="ap" placeholder="PIN (mín. 4 dígitos)" inputmode="numeric"><button class="b" id="ab" style="flex:0 0 auto">Agregar</button></div><div id="am"></div><div id="al"></div></div></div>
+ </div></div></div>
+<div id="mo" class="hide"></div>
+<script>
+let CFG,T=null,ME="",ROL="",L=[],NAMES=[];
+const $=i=>document.getElementById(i),E=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const API_URL = "https://script.google.com/macros/s/AKfycbwN19jmth92qZk3ZqoJIFjK5Atzwtkcx1uC2FAAZIvF6GUKAG-1ckz8mGy2ZjH3sxrlkA/exec";
+
+function bn(t){let b=document.getElementById("bn");if(!b){b=document.createElement("div");b.id="bn";b.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#b0102c;color:#fff;padding:10px 14px;font-size:13px;cursor:pointer";b.onclick=()=>b.remove();document.body.appendChild(b)}b.textContent="⚠ "+t+" (toca para cerrar)"}
+window.addEventListener("error",e=>bn("Error en la página: "+e.message));
+window.addEventListener("unhandledrejection",e=>bn("Error: "+((e.reason&&e.reason.message)||e.reason)));
+async function run(action, payload = {}) {
+  let res;
+  try{res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...payload})});}
+  catch(e){throw new Error("No se pudo conectar con el servidor de Google ("+e.message+")")}
+  let data;
+  try{data=await res.json()}catch(e){throw new Error("El servidor no devolvió datos válidos. Revisa que la implementación sea Aplicación web con acceso para Cualquier persona y que hayas creado una NUEVA VERSIÓN.")}
+  if(!data.ok)throw new Error(data.error||"Error del servidor");
+  return data.result;
+}
+const O=a=>a.map(x=>`<option>${E(x)}</option>`).join(""),M=x=>"$"+(+x||0).toFixed(2),METS=["Efectivo","Transferencia bancaria"];
+const msg=(el,t,e)=>{$(el).innerHTML=`<div class="m ${e?"er":""}">${t}</div>`};
+function fileB(inp){return new Promise((ok,no)=>{const f=inp&&inp.files[0];if(!f)return ok(null);if(f.size>6e6)return no(new Error("Un archivo pesa más de 6 MB"));const r=new FileReader();r.onload=()=>ok({data:r.result.split(",")[1],type:f.type||"application/octet-stream",name:f.name});r.onerror=no;r.readAsDataURL(f)})}
+function steps(fe,e){return `<div class="steps">${CFG.estados.map((n,i)=>`<div class="st ${i<e?"d":i==e?"n":""}">${n}<small>${E(fe[i])||"&nbsp;"}</small></div>`).join("")}</div>`}
+/* ---- Formulario (público y empleados) ---- */
+function form(p,st){return `<div id="${p}box"><div class="g"><div><label>Nombre *</label><input id="${p}n"></div><div><label>Teléfono / WhatsApp *</label><input id="${p}t" type="tel"></div>
+<div class="f"><label><b>Camisas</b> · ${M(CFG.precio)} cada una</label><div id="${p}cm"></div><button type="button" class="b o s" data-a="cam">+ Agregar camisa (otro color o talla)</button></div>
+<div class="f"><label><b>Logos / diseños</b> · puedes agregar varios (ej. grande atrás y pequeño al frente)</label><div id="${p}lgs"></div><button type="button" class="b o s" data-a="logo">+ Agregar logo</button></div>
+<div class="f"><label>Detalles adicionales</label><textarea id="${p}d" rows="2"></textarea></div>
+${st?`<div><label>Encargado del pedido</label><select id="${p}e"></select></div><div><label>Anticipo recibido ($)</label><input id="${p}am" type="number" step="0.01" min="0" value="0"></div><div><label>Método del anticipo</label><select id="${p}mt">${O(METS)}</select></div><div><label>Comprobante del anticipo</label><input id="${p}cf" type="file" accept="image/*,.pdf"></div>`:""}
+<div class="f tot" id="${p}tt"></div><div class="f"><button class="b" id="${p}b" type="button">${st?"Guardar pedido":"Enviar pedido"}</button></div></div></div>`}
+function camRow(){return `<div class="r cam"><select class="co">${O(CFG.colores)}</select><select class="ta">${O(CFG.tallas)}</select><input class="qn" type="number" min="1" value="1" title="Cantidad"><button type="button" class="b o s x">✕</button></div>`}
+function logoRow(){return `<div class="r lg"><select class="ub">${O(CFG.ubic)}</select><select class="tm">${CFG.logos.map(l=>`<option value="${E(l.id)}">${E(l.id)} · +${M(l.p)}</option>`).join("")}</select><input class="fi" type="file" accept="image/*,.pdf"><button type="button" class="b o s x">✕</button></div>`}
+function calc(p){const b=$(p+"box"),n=[...b.querySelectorAll(".qn")].reduce((a,x)=>a+Math.max(1,+x.value||1),0),
+ lp=[...b.querySelectorAll(".tm")].reduce((a,x)=>a+(CFG.logos.find(l=>l.id==x.value)||{p:0}).p,0);
+ $(p+"tt").innerHTML=`${n} camisa(s) × (${M(CFG.precio)} + logos ${M(lp)}) = <b>${M(n*(CFG.precio+lp))}</b>`}
+function wire(p,fn){const b=$(p+"box");b.addEventListener("click",e=>{const t=e.target;
+ if(t.dataset.a=="cam")$(p+"cm").insertAdjacentHTML("beforeend",camRow());else if(t.dataset.a=="logo")$(p+"lgs").insertAdjacentHTML("beforeend",logoRow());
+ else if(t.classList.contains("x")){const r=t.closest(".r");if(!(r.classList.contains("cam")&&b.querySelectorAll(".cam").length<2))r.remove()}calc(p)});
+ b.addEventListener("input",()=>calc(p));$(p+"cm").innerHTML=camRow();calc(p);$(p+"b").onclick=()=>fn(p)}
+async function readF(p){const b=$(p+"box"),q=s=>[...b.querySelectorAll(s)],rows=q(".lg");
+ return {d:{cliente:$(p+"n").value.trim(),telefono:$(p+"t").value.trim(),detalles:$(p+"d").value.trim(),
+  camisas:q(".cam").map(r=>({color:r.querySelector(".co").value,talla:r.querySelector(".ta").value,cantidad:+r.querySelector(".qn").value||1})),
+  logos:rows.map(r=>({ubic:r.querySelector(".ub").value,tam:r.querySelector(".tm").value}))},
+  arch:await Promise.all(rows.map(r=>fileB(r.querySelector(".fi"))))}}
+function clear(p){["n","t","d"].forEach(i=>$(p+i).value="");$(p+"lgs").innerHTML="";$(p+"cm").innerHTML=camRow();calc(p)}
+/* ---- Público ---- */
+async function enviar(p){const m=p=="p"?"pm":"sm";let x;try{x=await readF(p)}catch(e){return msg(m,E(e.message),1)}
+ if(!x.d.cliente||!x.d.telefono)return msg(m,"Escribe el nombre y el teléfono.",1);
+ $(p+"b").disabled=true;msg(m,"Guardando…");
+ try{let c;if(p=="p")c=await run("crearSolicitud",{data:x.d,arch:x.arch});
+  else{const cf=await fileB($("scf"));c=await run("nuevoPedido",{token:T,data:x.d,arch:x.arch,enc:$("se").value,pg:{monto:+$("sam").value||0,metodo:$("smt").value,comp:cf}});$("sam").value=0;$("scf").value=""}
+  msg(m,`${p=="p"?"¡Pedido recibido! Tu código es":"Pedido guardado:"} <span class="code">${c}</span>${p=="p"?". Guárdalo para consultar el estado.":""}`);clear(p);if(p=="s")load()}
+ catch(e){msg(m,"No se pudo guardar: "+E(e.message||e),1)}$(p+"b").disabled=false}
+$("qb").onclick=async()=>{const c=$("qc").value.trim();if(!c)return;msg("qr","Buscando…");
+ try{const r=await run("consultarEstado",{codigo:c});$("qr").innerHTML=r?`<div class="m">Estado: <b>${CFG.estados[r.estado]}</b> · Total ${M(r.total)} · Pagado ${M(r.pagado)} · Saldo ${M(r.total-r.pagado)}</div>`+steps(r.fechas,r.estado):'<div class="m er">No encontramos ese código.</div>'}catch(e){msg("qr","Error al consultar.",1)}};
+/* ---- Empleados ---- */
+$("goS").onclick=()=>{$("pub").classList.add("hide");$("stf").classList.remove("hide")};$("lv").onclick=()=>{$("stf").classList.add("hide");$("pub").classList.remove("hide")};
+$("lb").onclick=async()=>{let r;
+ try{r=await run("login",{nombre:$("ln").value.trim(),pin:$("lp").value})}catch(e){return msg("lm",E(e.message||"Nombre o PIN incorrecto"),1)}
+ T=r.t;ME=r.n;ROL=r.rol;$("lg").classList.add("hide");$("pt").classList.remove("hide");
+ document.querySelectorAll(".adm").forEach(b=>b.classList.toggle("hide",ROL!="admin"));
+ try{await names()}catch(e){bn(e.message)}
+ try{vista("v1")}catch(e){bn(e.message)}
+ load()};
+$("lo").onclick=()=>{T=null;$("pt").classList.add("hide");$("lg").classList.remove("hide");$("lp").value=""};
+function vista(v){["v1","v2","v3","v4"].forEach(x=>$(x).classList.toggle("hide",x!=v));document.querySelectorAll("[data-v]").forEach(b=>{b.classList.toggle("on",b.dataset.v==v);b.classList.toggle("o",b.dataset.v!=v)});if(v=="v3")rep();if(v=="v4")emps()}
+document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>vista(b.dataset.v));
+async function names(){try{NAMES=await run("nombres",{token:T})}catch(e){}if($("se"))$("se").innerHTML=optR("");const v=$("fr").value;
+ $("fr").innerHTML='<option value="*">Todos los encargados</option><option value="__yo">Mis pedidos</option><option value="__no">Sin asignar</option>'+NAMES.map(n=>`<option>${E(n)}</option>`).join("");$("fr").value=v||"*"}
+const optR=s=>'<option value="">— Sin asignar —</option>'+NAMES.map(n=>`<option ${n==s?"selected":""}>${E(n)}</option>`).join("")+(s&&!NAMES.includes(s)?`<option selected>${E(s)}</option>`:"");
+
+async function load(){$("ct").textContent="Cargando…";try{L=await run("listar",{token:T});draw();if(!$("v3").classList.contains("hide"))rep()}catch(e){$("ls").innerHTML='<div class="m er">No se pudieron cargar los pedidos: '+E(e.message||e)+'</div>';$("ct").textContent=""}}
+$("rf").onclick=load;$("bq").oninput=draw;$("fl").onchange=draw;$("fr").onchange=draw;
+function card(p){const pag=p.anticipo+p.pagoFinal,sal=p.total-pag,lk=(id,t)=>id?` <a target="_blank" href="https://drive.google.com/file/d/${E(id)}/view">${t}</a>`:"";
+ return `<div class="c"><div class="top"><span class="code">${E(p.codigo)}</span><span class="mu">Ingresado: ${E(p.ingresado)} por <b>${E(p.por)}</b></span></div>
+ <div class="info"><div><b>Cliente</b>${E(p.cliente)}</div><div><b>Teléfono</b>${E(p.telefono)}</div><div><b>Camisas</b>${p.camisas.map(c=>`${c.cantidad} × ${E(c.color)} ${E(c.talla)}`).join("<br>")}</div><div><b>Encargado</b>${E(p.enc)||"⚠ Sin asignar"}</div></div>
+ <div>${p.logos.map(l=>`<div class="li">${l.img?`<a target="_blank" href="https://drive.google.com/file/d/${E(l.img)}/view"><img class="th" src="https://drive.google.com/thumbnail?id=${E(l.img)}&sz=w200"></a>`:'<div class="mu">Sin imagen</div>'}${E(l.ubic)}<br>${E(l.tam)}</div>`).join("")||'<span class="mu">Sin logos</span>'}</div>
+ ${p.detalles?`<div class="mu">${E(p.detalles)}</div>`:""}
+ <div class="pay"><b>Total ${M(p.total)}</b> · Anticipo ${M(p.anticipo)}${p.anticipo?" ("+E(p.metAnt)+")":""}${lk(p.compAnt,"comprobante")} · Pago final ${M(p.pagoFinal)}${p.pagoFinal?" ("+E(p.metFinal)+")":""}${lk(p.compFinal,"comprobante")} · <b style="color:${sal>0.005?"#b0102c":"#17a36b"}">Saldo ${M(sal)}</b></div>
+ ${steps(p.fechas,p.estado)}
+ <div class="r"><select data-e="${E(p.codigo)}" ${p.estado==4&&ROL!="admin"?"disabled":""}>${CFG.estados.slice(0,4).map((e,i)=>`<option value="${i}" ${i==p.estado?"selected":""}>${e}</option>`).join("")}${p.estado==4?'<option selected disabled>Camisa entregada</option>':""}</select>
+ <select data-r="${E(p.codigo)}">${optR(p.enc)}</select><button class="b o s x" data-ant="${E(p.codigo)}">+ Anticipo</button>${p.estado<4?`<button class="b s x" data-ent="${E(p.codigo)}">Entregar y cobrar</button>`:""}</div>
+ <details class="mu"><summary>Historial (${p.hist.length})</summary>${p.hist.map(h=>`<div>${E(h.t)} · <b>${E(h.por)}</b> — ${E(h.txt)}</div>`).join("")}</details></div>`}
+function draw(){const q=$("bq").value.toLowerCase(),f=+$("fl").value,r=$("fr").value||"*";
+ const a=L.filter(p=>(f<0||p.estado==f)&&(p.codigo+p.cliente).toLowerCase().includes(q)&&(r=="*"||(r=="__no"?!p.enc:r=="__yo"?p.enc==ME:p.enc==r)));
+ $("ct").textContent=a.length+" pedido(s)";$("ls").innerHTML=a.map(card).join("")||'<div class="c mu">Sin pedidos.</div>'}
+$("ls").addEventListener("change",async e=>{const t=e.target;try{if(t.dataset.e)await run("cambiarEstado",{token:T,codigo:t.dataset.e,estado:+t.value});else if(t.dataset.r)await run("asignar",{token:T,codigo:t.dataset.r,enc:t.value});else return;load()}catch(x){alert(x.message||"Error");load()}});
+$("ls").addEventListener("click",e=>{const t=e.target,get=c=>L.find(p=>p.codigo==c);
+ if(t.dataset.ant)modal("Registrar anticipo",0,0,(m,met,a)=>run("anticipo",{token:T,codigo:t.dataset.ant,monto:m,metodo:met,archivo:a}));
+ if(t.dataset.ent){const p=get(t.dataset.ent);modal("Entregar y cobrar · "+p.codigo,Math.max(0,p.total-p.anticipo-p.pagoFinal).toFixed(2),1,(m,met,a)=>run("entregar",{token:T,codigo:p.codigo,monto:m,metodo:met,archivo:a}))}});
+function modal(tt,def,req,fn){$("mo").innerHTML=`<div class="c" style="max-width:380px;margin:8vh auto"><h2>${tt}</h2><label>Monto recibido ($)</label><input id="mm" type="number" step="0.01" min="0" value="${def}"><label>Método de pago</label><select id="mt">${O(METS)}</select>
+ <label>Comprobante ${req?"* (foto o documento)":"(opcional)"}</label><input id="mf" type="file" accept="image/*,.pdf"><div id="me"></div><div class="r" style="margin-top:10px"><button class="b" id="mok">Confirmar</button><button class="b o" id="mx">Cancelar</button></div></div>`;$("mo").classList.remove("hide");
+ $("mx").onclick=()=>$("mo").classList.add("hide");
+ $("mok").onclick=async()=>{try{if(req&&!$("mf").files[0])throw new Error("Debes subir el comprobante");$("mok").disabled=true;msg("me","Guardando…");
+  await fn(+$("mm").value||0,$("mt").value,await fileB($("mf")));$("mo").classList.add("hide");load()}catch(e){msg("me",E(e.message||e),1);$("mok").disabled=false}}}
+const pd=s=>{const m=String(s).match(/(\d+)\/(\d+)\/(\d+)/);return m?new Date(+m[3],m[2]-1,+m[1]):new Date(0)};
+function rep(){const d=$("rd").value?new Date($("rd").value+"T00:00:00"):new Date(0),h=$("rh").value?new Date($("rh").value+"T23:59:59"):new Date(9e12),a=L.filter(p=>{const x=pd(p.ingresado);return x>=d&&x<=h});
+ let tot=0,ant=0,fin=0,efe=0,tra=0,ent=0;
+ a.forEach(p=>{tot+=p.total;ant+=p.anticipo;fin+=p.pagoFinal;if(p.estado==4)ent++;
+  if(p.anticipo){if(p.metAnt=="Efectivo")efe+=p.anticipo;else tra+=p.anticipo}if(p.pagoFinal){if(p.metFinal=="Efectivo")efe+=p.pagoFinal;else tra+=p.pagoFinal}});
+ const cob=ant+fin,k=(n,v)=>`<div>${n}<b>${v}</b></div>`;
+ $("rp").innerHTML=`<div class="k">${k("Pedidos",a.length)+k("Entregados",ent)+k("Vendido (total)",M(tot))+k("Cobrado",M(cob))+k("Por cobrar",M(tot-cob))+k("Anticipos",M(ant))+k("Pagos al entregar",M(fin))+k("En efectivo",M(efe))+k("Por transferencia",M(tra))}</div>
+ <div style="overflow-x:auto"><table><tr><th>Código</th><th>Fecha</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Anticipo</th><th>Final</th><th>Saldo</th></tr>${a.map(p=>`<tr><td>${E(p.codigo)}</td><td>${E(p.ingresado.slice(0,10))}</td><td>${E(p.cliente)}</td><td>${CFG.estados[p.estado]}</td><td>${M(p.total)}</td><td>${M(p.anticipo)}</td><td>${M(p.pagoFinal)}</td><td>${M(p.total-p.anticipo-p.pagoFinal)}</td></tr>`).join("")}</table></div>`}
+$("rd").onchange=rep;$("rh").onchange=rep;
+async function emps(){try{const v=await run("listarEmp",{token:T});$("al").innerHTML=v.map(x=>`<div class="r"><span>${E(x.n)} <span class="mu">${x.rol=="admin"?"· administradora":""}</span></span>${x.rol=="admin"?"":`<button class="b o s" data-q="${E(x.n)}" style="flex:0 0 auto">Quitar</button>`}</div>`).join("")}catch(e){msg("am",E(e.message),1)}}
+$("al").onclick=async e=>{const n=e.target.dataset.q;if(n&&confirm("¿Quitar a "+n+"?"))try{await run("quitarEmp",{token:T,nombre:n});emps();names()}catch(x){alert(x.message)}};
+$("ab").onclick=async()=>{try{await run("agregarEmp",{token:T,nombre:$("an").value,pin:$("ap").value});msg("am","Listo: "+E($("an").value)+" ya puede entrar con su PIN.");$("an").value=$("ap").value="";emps();names()}catch(e){msg("am",E(e.message||e),1)}};
+const CFG0={precio:5,logos:[{id:"10 cm",p:1.5},{id:"12.85 x 8.5 cm",p:3},{id:"12.85 x 19 cm",p:5},{id:"27.7 x 19 cm",p:7},{id:"27.7 x 40 cm",p:10}],colores:["Negro","Blanco"],tallas:["S","M","L","XL"],ubic:["Frente","Espalda","Manga izquierda","Manga derecha"],estados:["Pedido ingresado","En proceso","Impresión agregada","Camisa completa","Camisa entregada"]};
+function init(c){CFG=c;$("pf").innerHTML=form("p",0);$("sf").innerHTML=form("s",1);wire("p",enviar);wire("s",enviar);
+ $("fl").innerHTML='<option value="-1">Todos los estados</option>'+c.estados.map((e,i)=>`<option value="${i}">${e}</option>`).join("");
+ $("rd").value=new Date().toISOString().slice(0,8)+"01";$("se").innerHTML=optR("")}
+init(CFG0);
+const srv=document.createElement("div");srv.className="mu";srv.style.cssText="text-align:center;margin-top:6px";srv.textContent="Conectando con el servidor…";document.querySelector("footer").appendChild(srv);
+run("config").then(c=>{srv.innerHTML='<span style="color:#17a36b">Servidor conectado ✓</span>';if(JSON.stringify(c)!=JSON.stringify(CFG0))init(c)}).catch(e=>{srv.innerHTML='<span style="color:#b0102c">⚠ '+E(e.message||e)+'</span>'});
+</script></body></html>
