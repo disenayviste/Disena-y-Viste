@@ -39,7 +39,7 @@ footer{text-align:center;padding:10px}footer a{color:var(--mu);font-size:13px;cu
 <div id="stf" class="hide">
  <div id="lg" class="c"><h2>Portal de empleados</h2><div class="g"><div><label>Nombre</label><input id="ln" placeholder="Nombre y apellido"></div><div><label>PIN</label><input id="lp" type="password"></div></div>
   <div class="r" style="margin-top:10px"><button class="b" id="lb">Entrar</button><button class="b o" id="lv">Volver</button></div><div id="lm"></div></div>
- <div id="pt" class="hide">
+ <div id="panel" class="hide">
   <div class="r"><button class="b on" data-v="v1">Pedidos</button><button class="b o" data-v="v2">Nuevo pedido</button><button class="b o adm" data-v="v3">Reporte financiero</button><button class="b o adm" data-v="v4">Empleados</button><button class="b o s" id="lo" style="flex:0 0 auto">Salir</button></div>
   <div id="v1"><div class="r"><input id="bq" placeholder="Buscar cliente o código"><select id="fl"></select><select id="fr"></select><button class="b o s" id="rf" style="flex:0 0 auto">Actualizar</button></div><div class="mu" id="ct"></div><div id="ls"></div></div>
   <div id="v2" class="hide"><div class="c"><h2>Nuevo pedido</h2><div id="sf"></div><div id="sm"></div></div></div>
@@ -104,12 +104,12 @@ $("qb").onclick=async()=>{const c=$("qc").value.trim();if(!c)return;msg("qr","Bu
 $("goS").onclick=()=>{$("pub").classList.add("hide");$("stf").classList.remove("hide")};$("lv").onclick=()=>{$("stf").classList.add("hide");$("pub").classList.remove("hide")};
 $("lb").onclick=async()=>{let r;
  try{r=await run("login",{nombre:$("ln").value.trim(),pin:$("lp").value})}catch(e){return msg("lm",E(e.message||"Nombre o PIN incorrecto"),1)}
- T=r.t;ME=r.n;ROL=r.rol;$("lg").classList.add("hide");$("pt").classList.remove("hide");
+ T=r.t;ME=r.n;ROL=r.rol;$("lg").classList.add("hide");$("panel").classList.remove("hide");
  document.querySelectorAll(".adm").forEach(b=>b.classList.toggle("hide",ROL!="admin"));
  try{await names()}catch(e){bn(e.message)}
  try{vista("v1")}catch(e){bn(e.message)}
  load()};
-$("lo").onclick=()=>{T=null;$("pt").classList.add("hide");$("lg").classList.remove("hide");$("lp").value=""};
+$("lo").onclick=()=>{T=null;$("panel").classList.add("hide");$("lg").classList.remove("hide");$("lp").value=""};
 function vista(v){["v1","v2","v3","v4"].forEach(x=>$(x).classList.toggle("hide",x!=v));document.querySelectorAll("[data-v]").forEach(b=>{b.classList.toggle("on",b.dataset.v==v);b.classList.toggle("o",b.dataset.v!=v)});if(v=="v3")rep();if(v=="v4")emps()}
 document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>vista(b.dataset.v));
 async function names(){try{NAMES=await run("nombres",{token:T})}catch(e){}if($("se"))$("se").innerHTML=optR("");const v=$("fr").value;
