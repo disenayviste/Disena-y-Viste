@@ -540,97 +540,135 @@ function pvMountCss(box,spec){box.innerHTML='<div class="stage"><div class="card
  st.onpointermove=e=>{if(dx==null)return;st._a=(st._a+(e.clientX-dx)*.6)%360;dx=e.clientX;setAng(st)};st.onpointerup=st.onpointercancel=()=>{dx=null};
  if(!matchMedia("(prefers-reduced-motion: reduce)").matches)spin(st,true)}
 /* ===== Visor 3D real (WebGL + Three.js) =====
-   Cada camisa se reconstruye en 3D a partir de tus fotos: el contorno sale de la foto de frente/espalda y la profundidad real
-   (torso, cuello más bajo adelante, mangas redondas) sale de la foto de lado. Es una camisa hueca: cuello, mangas y dobladillo abiertos.
+   La camisa es un modelo 3D hecho por código (torso de una pieza, mangas montadas, cuello acanalado y dobladillos con costura),
+   con luz de estudio suave. Los logos se pintan a su tamaño real en cm sobre la tela.
    Si el navegador no puede (sin WebGL o sin internet para bajar Three.js) se queda el visor anterior, que siempre funciona. */
 let T3=null,T3P=null;
 const T3U=["https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","https://unpkg.com/three@0.170.0/build/three.module.min.js"];
 function loadThree(){return T3P||(T3P=(async()=>{for(const u of T3U){try{T3=await Promise.race([import(u),new Promise((_,r)=>setTimeout(r,12000))]);return T3}catch(e){}}T3P=null;throw new Error("three")})())}
 const PIC={},LG=new Map();
 function pic(u,cors){return PIC[u]||(PIC[u]=new Promise((ok,no)=>{const i=new Image();if(cors)i.crossOrigin="anonymous";i.onload=()=>ok(i);i.onerror=()=>no(new Error("img"));i.src=u}).catch(e=>{delete PIC[u];throw e}))}
-/* medidas del modelo (px de las fotos originales; U0 = cm por px) */
-const GN=200,GM=177,CW=928,CH=820,U0=51/290,GW=516*U0,GH=456*U0,CELL=516/GN,DK=.8,ZK=U0*DK,CX=301,SIDEC=295;
-const sm=(x,a,b)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
-/* perfil de profundidad por fila, medido en la foto de lado: dónde está el frente y la espalda de la camisa */
-let PROF=null;
-function profile(side){if(PROF)return PROF;
- const w=side.naturalWidth||side.width,h=side.naturalHeight||side.height,c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(side,0,0);
- const a=x.getImageData(0,0,w,h).data,F=new Float32Array(h).fill(NaN),B=new Float32Array(h).fill(NaN),sx=270/w;
- for(let r=0;r<h;r++){let l=-1,q=-1;for(let i=0;i<w;i++)if(a[(r*w+i)*4+3]>128){if(l<0)l=i;q=i}if(l>=0&&q-l>8){F[r]=SIDEC-(160+l*sx);B[r]=SIDEC-(160+q*sx)}}
- const zc=new Float32Array(GM+1),bt=new Float32Array(GM+1);let lf=0,lb=0;
- const get=(arr,r)=>{r=Math.max(0,Math.min(h-1,r));let k=0;while(isNaN(arr[r])&&k<h){r=r<h/2?r+1:r-1;k++}return arr[r]};
- for(let j=0;j<=GM;j++){const yo=38+570*j/GM,r=(yo-20)*h/580;let sf=0,sb=0,n=0;for(let d=-6;d<=6;d++){sf+=get(F,Math.round(r+d));sb+=get(B,Math.round(r+d));n++}sf/=n;sb/=n;zc[j]=(sf+sb)/2;bt[j]=Math.max(18,(sf-sb)/2)}
- for(let pass=0;pass<3;pass++)for(const a of [zc,bt]){const t=a.slice();for(let j=0;j<=GM;j++){let q=0,n=0;for(let e=-7;e<=7;e++){const jj=j+e;if(jj>=0&&jj<=GM){q+=t[jj];n++}}a[j]=q/n}}
- return PROF={zc,bt}}
-/* forma de una panel (frente o espalda) a partir del contorno de la foto */
-function panel(img,back,prof){
- const W=GN+1,H=GM+1,K=34,H2=H+K+6,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,W,H);
- const a=x.getImageData(0,0,W,H).data,ins=new Uint8Array(W*H2),ext=new Uint8Array(W*H2);
- for(let j=0;j<H;j++)for(let i=0;i<W;i++)ins[j*W+i]=a[(j*W+i)*4+3]>110?1:0;
- /* suavizado del contorno para estimar hacia dónde mira cada borde */
- const g=new Float32Array(W*H2);for(let k=0;k<W*H2;k++)g[k]=ins[k];
- for(let it=0;it<2;it++){const o=new Float32Array(W*H2);for(let j=1;j<H2-1;j++)for(let i=1;i<W-1;i++){let s=0;for(let b=-1;b<=1;b++)for(let e=-1;e<=1;e++)s+=g[(j+b)*W+i+e];o[j*W+i]=s/9}g.set(o)}
- /* los bordes que miran hacia abajo (dobladillo y puños) se dejan abiertos: se prolongan para que sean tubos, no láminas pinchadas */
- for(let j=1;j<H-1;j++)for(let i=1;i<W-1;i++){const p=j*W+i;if(!ins[p]||ins[p+W])continue;
-  const gx=g[p+1]-g[p-1],gy=g[p+W]-g[p-W],m=Math.hypot(gx,gy);if(m<1e-4)continue;if(-gy/m>.45)for(let k=1;k<=K;k++){const jj=j+k;if(jj+4>=H2)break;const q=jj*W+i,wl=o=>ins[q+o]&&ins[q+o+4*W];if(ins[q]||wl(-1)||wl(1)||wl(-2)||wl(2))break;ext[q]=1}}
- const msk=new Uint8Array(W*H2);for(let k=0;k<W*H2;k++)msk[k]=ins[k]|ext[k];
- /* distancia al borde más cercano */
- const BIG=1e6,r2=1.4142,d=new Float32Array(W*H2);for(let k=0;k<W*H2;k++)d[k]=msk[k]?BIG:0;
- const gd=(i,j)=>(i<0||i>=W||j<0||j>=H2)?0:d[j*W+i];
- for(let j=0;j<H2;j++)for(let i=0;i<W;i++){const k=j*W+i;if(d[k])d[k]=Math.min(d[k],gd(i-1,j)+1,gd(i,j-1)+1,gd(i-1,j-1)+r2,gd(i+1,j-1)+r2)}
- for(let j=H2-1;j>=0;j--)for(let i=W-1;i>=0;i--){const k=j*W+i;if(d[k])d[k]=Math.min(d[k],gd(i+1,j)+1,gd(i,j+1)+1,gd(i+1,j+1)+r2,gd(i-1,j+1)+r2)}
- /* radio local: el grosor del tubo (torso o manga) al que pertenece cada punto */
- const idx=[];for(let k=0;k<W*H2;k++)if(d[k]>0)idx.push(k);idx.sort((p,q)=>d[q]-d[p]);
- let R=new Float32Array(W*H2);
- for(const p of idx){const i=p%W,j=(p/W)|0;let best=-1,bd=d[p];for(let b=-1;b<=1;b++)for(let e=-1;e<=1;e++){if(!b&&!e)continue;const ii=i+e,jj=j+b;if(ii<0||ii>=W||jj<0||jj>=H2)continue;const q=jj*W+ii;if(d[q]>bd+1e-3){bd=d[q];best=q}}R[p]=best<0?d[p]:R[best]}
- for(let pass=0;pass<2;pass++){const t=new Float32Array(W*H2),o=new Float32Array(W*H2),r=4;
-  for(let j=0;j<H2;j++)for(let i=0;i<W;i++){let s=0,n=0;for(let e=-r;e<=r;e++){const ii=i+e;if(ii>=0&&ii<W&&msk[j*W+ii]){s+=R[j*W+ii];n++}}t[j*W+i]=n?s/n:R[j*W+i]}
-  for(let j=0;j<H2;j++)for(let i=0;i<W;i++){let s=0,n=0;for(let e=-r;e<=r;e++){const jj=j+e;if(jj>=0&&jj<H2&&msk[jj*W+i]){s+=t[jj*W+i];n++}}o[j*W+i]=n?s/n:t[j*W+i]}R=o}
- /* alturas */
- let Fv=new Float32Array(W*H),Wt=new Float32Array(W*H);
- for(let j=0;j<H;j++)for(let i=0;i<W;i++){const k=j*W+i;if(!ins[k])continue;const Rr=Math.max(R[k],d[k]),t=Math.min(1,Math.max(0,d[k]-1)/Rr),wx=1-sm(Math.abs(40+516*i/GN-CX),132,168),n=2+.7*wx;
-  Fv[k]=Math.pow(1-Math.pow(1-t,n),1/n);Wt[k]=wx}
- for(let pass=0;pass<5;pass++){const o=new Float32Array(W*H);for(let j=0;j<H;j++)for(let i=0;i<W;i++){const k=j*W+i;if(!ins[k])continue;if(d[k]<1.5){o[k]=0;continue}let s=0,n=0;for(let b=-1;b<=1;b++)for(let e=-1;e<=1;e++){const ii=i+e,jj=j+b;if(ii<0||ii>=W||jj<0||jj>=H||!ins[jj*W+ii])continue;const wgt=(b&&e)?1:(b||e)?2:4;s+=Fv[jj*W+ii]*wgt;n+=wgt}o[k]=s/n}Fv=o}
- const pos=new Float32Array(W*H*3),uv=new Float32Array(W*H*2),zs=back?-1:1;
- const bs=70;
- for(let j=0;j<H;j++)for(let i=0;i<W;i++){const k=j*W+i,wx=Wt[k]||0,F=Fv[k];
-  const b=bs+(prof.bt[j]-bs)*wx,zc=prof.zc[j]*wx;
-  const z=(ins[k]?(zc+zs*b*F):zc)*ZK;
-  const X=(40+516*i/GN-CX)*U0,Y=-((38+570*j/GM)-323)*U0*.8;
-  pos[k*3]=back?-X:X;pos[k*3+1]=Y;pos[k*3+2]=z;uv[k*2]=i/GN;uv[k*2+1]=1-j/GM}
- /* los puntos fuera del contorno toman la profundidad de su vecino para que las celdas del borde queden limpias */
- const known=new Uint8Array(ins);
- for(let pass=0;pass<2;pass++){const nk=new Uint8Array(known),nz=pos.slice();for(let j=0;j<H;j++)for(let i=0;i<W;i++){const k=j*W+i;if(known[k])continue;let s=0,n=0;for(let b=-1;b<=1;b++)for(let e=-1;e<=1;e++){const ii=i+e,jj=j+b;if(ii>=0&&ii<W&&jj>=0&&jj<H&&known[jj*W+ii]){s+=pos[(jj*W+ii)*3+2];n++}}if(n){nz[k*3+2]=s/n;nk[k]=1}}pos.set(nz);known.set(nk)}
- const id=[];
- for(let j=0;j<GM;j++)for(let i=0;i<GN;i++){const a0=j*W+i,b0=a0+1,c0=a0+W,d0=c0+1;if(!(known[a0]&known[b0]&known[c0]&known[d0]))continue;
-  if(back){id.push(a0,b0,c0,b0,d0,c0)}else{id.push(a0,c0,b0,b0,c0,d0)}}
- return {pos,uv,idx:new Uint32Array(id)}}
-/* texturas: la foto con el borde limpio (sin halo blanco), el agujero del cuello y una copia del interior */
-const BASE={},HOLE={};
 function cvs(w,h){const c=document.createElement("canvas");c.width=w;c.height=h;return c}
-function holeMask(wf){if(HOLE.m)return HOLE.m;
- const w=wf.naturalWidth||wf.width,h=wf.naturalHeight||wf.height,c=cvs(w,h),x=c.getContext("2d",{willReadFrequently:true});x.drawImage(wf,0,0);const a=x.getImageData(0,0,w,h).data,m=new Uint8Array(w*h),sx=w/464,sy=h/513;
- const ok=(i,j)=>{if(i<150*sx||i>310*sx||j>75*sy||j<0)return false;const p=(j*w+i)*4;return a[p+3]>128&&(a[p]+a[p+1]+a[p+2])/3<208};
- const st=[[Math.round(240*sx),Math.round(30*sy)]];while(st.length){const [i,j]=st.pop();if(i<0||j<0||i>=w||j>=h||m[j*w+i]||!ok(i,j))continue;m[j*w+i]=1;st.push([i+1,j],[i-1,j],[i,j+1],[i,j-1])}
- const o=cvs(w,h),ox=o.getContext("2d"),im=ox.createImageData(w,h);
- for(let j=0;j<h;j++)for(let i=0;i<w;i++){let v=0;for(let b=-1;b<=1&&!v;b++)for(let e=-1;e<=1;e++){const ii=i+e,jj=j+b;if(ii>=0&&jj>=0&&ii<w&&jj<h&&m[jj*w+ii]){v=1;break}}const p=(j*w+i)*4;im.data[p+3]=v?255:0}
- ox.putImageData(im,0,0);return HOLE.m=o}
-function prep(img,hole){
- const B=cvs(CW,CH),bx=B.getContext("2d");bx.imageSmoothingQuality="high";bx.drawImage(img,0,0,CW,CH);
- const A0=cvs(CW,CH),a0=A0.getContext("2d");a0.drawImage(B,0,0);a0.globalCompositeOperation="source-in";a0.fillStyle="#000";a0.fillRect(0,0,CW,CH);
- const A=cvs(CW,CH),ax=A.getContext("2d");ax.drawImage(A0,0,0);
- for(const [dx,dy] of [[-1.3,0],[1.3,0],[0,-1.3],[0,1.3],[-1,-1],[1,-1],[-1,1],[1,1]])ax.drawImage(A0,dx,dy);
- const C=cvs(CW,CH),cx=C.getContext("2d");cx.drawImage(B,0,0);const T=cvs(CW,CH),tx=T.getContext("2d");
- for(let s=0;s<3;s++){tx.clearRect(0,0,CW,CH);tx.drawImage(C,0,0);cx.globalCompositeOperation="destination-over";for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]])cx.drawImage(T,dx*2,dy*2);cx.globalCompositeOperation="source-over"}
- const I=cvs(CW,CH);I.getContext("2d").drawImage(C,0,0);
- cx.globalCompositeOperation="destination-in";cx.drawImage(A,0,0);
- if(hole){cx.globalCompositeOperation="destination-out";cx.filter="blur(1.2px)";cx.drawImage(hole,0,0,CW,CH);cx.filter="none"}
- cx.globalCompositeOperation="source-over";
- return {c:C,i:I}}
-/* geometrías y texturas se reutilizan entre visores: la segunda vez es inmediato */
-const GC={};
-function geom(T,key,img,back,prof){let c=GC[key];if(!c){const p=panel(img,back,prof),g=new T.BufferGeometry();g.setAttribute("position",new T.BufferAttribute(p.pos,3));g.setIndex(new T.BufferAttribute(p.idx,1));g.computeVertexNormals();c=GC[key]={pos:p.pos,uv:p.uv,idx:p.idx,nrm:g.attributes.normal.array};g.dispose()}
- const g=new T.BufferGeometry();g.setAttribute("position",new T.BufferAttribute(c.pos,3));g.setAttribute("normal",new T.BufferAttribute(c.nrm,3));g.setAttribute("uv",new T.BufferAttribute(c.uv,2));g.setIndex(new T.BufferAttribute(c.idx,1));g.computeBoundingSphere();return g}
+/* ===== Modelo 3D de la camisa: hecho por código (no sale de las fotos) =====
+   Medidas en cm de una talla M (las otras tallas se escalan con TW). Torso de una sola pieza (sin costura en los costados),
+   hombros redondeados, cuello redondo acanalado con grosor, mangas montadas y dobladillos doblados con su costura.
+   Las coordenadas de textura son cm sobre la tela: así los logos se pintan a su tamaño real. */
+const SM={HPS:72,nR:9.6,dropF:8.6,dropB:2.1,D:22,S:19,slope:.3,n:2.4,zs:-.6,T:.3,PX:14,TW:140,TH:108,VO:28,UF:35,UB:105};
+const SA=[[0,19.7],[12,19.4],[28,19.4],[42,20.1],[52,20.5],[80,20.6]],
+ SBF=[[0,10.1],[12,10.2],[28,10.7],[42,11.7],[52,11.9],[62,11.6],[80,11.2]],
+ SBB=[[0,9.9],[12,9.5],[28,9.6],[42,10.3],[52,10.8],[80,10.7]];
+/* curva suave que pasa por los puntos de una tabla [y,valor] */
+function cr_(tb,y){const n=tb.length;if(y<=tb[0][0])return tb[0][1];if(y>=tb[n-1][0])return tb[n-1][1];let i=1;while(tb[i][0]<y)i++;
+ const p0=tb[Math.max(0,i-2)],p1=tb[i-1],p2=tb[i],p3=tb[Math.min(n-1,i+1)],h=p2[0]-p1[0],t=(y-p1[0])/h,t2=t*t,t3=t2*t,
+  m1=(p2[1]-p0[1])/(p2[0]-p0[0])*h,m2=(p3[1]-p1[1])/(p3[0]-p1[0])*h;
+ return (2*t3-3*t2+1)*p1[1]+(t3-2*t2+t)*m1+(-2*t3+3*t2)*p2[1]+(t3-t2)*m2}
+/* corte del torso: superelipse (más "cuadrada" que una elipse, como una camisa puesta) y su normal horizontal */
+function se_(f,A,B){const n=SM.n,s=Math.sin(f),c=Math.cos(f),e=2/n,x=A*Math.sign(s)*Math.pow(Math.abs(s),e),z=B*Math.sign(c)*Math.pow(Math.abs(c),e);
+ const nx=Math.sign(x)*Math.pow(Math.abs(x/A),n-1)/A,nz=Math.sign(z)*Math.pow(Math.abs(z/B),n-1)/B,l=Math.hypot(nx,nz)||1;return [x,z,nx/l,nz/l]}
+const ss_=(x,a,b)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+/* perfil de un borde abierto (dobladillo y puños): [distancia al borde, desplazamiento hacia afuera, sombra].
+   Tela doblada hacia adentro con grosor real, banda un poco más gruesa y la línea de costura. */
+const HEM_=(()=>{const T=SM.T,r=T/2,yc=.22,st=[];
+ [3.1,2.6,2.1,1.6,1.15,.75,.42].forEach(y=>st.push([y,-T,.8]));
+ for(let k=0;k<=8;k++){const a=Math.PI+Math.PI*k/8;st.push([yc+r*Math.sin(a),-r+r*Math.cos(a),.8+.2*k/8])}
+ [.34,.62,.95,1.3,1.6,1.82,1.97,2.06,2.12,2.17,2.22,2.28,2.36,2.46,2.6,2.8,3.1,3.5,3.95].forEach(y=>st.push([y,.05*(1-ss_(y,2.3,2.55))*ss_(y,.2,.5)-.075*Math.exp(-Math.pow((y-2.17)/.07,2)),1]));
+ return st})();
+/* arma la malla: normales suaves (se promedian donde dos partes comparten un punto) y caras siempre hacia afuera */
+function mesh_(pos,uv,col,idx,vi,dir){const n=pos.length/3,nr=new Float32Array(n*3);
+ for(let k=0;k<idx.length;k+=3){const a=idx[k]*3,b=idx[k+1]*3,c=idx[k+2]*3,ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],vx=pos[c]-pos[a],vy=pos[c+1]-pos[a+1],vz=pos[c+2]-pos[a+2],
+  x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;for(const q of [a,b,c]){nr[q]+=x;nr[q+1]+=y;nr[q+2]+=z}}
+ const M=new Map();for(let i=0;i<n;i++){const k=Math.round(pos[i*3]*200)+","+Math.round(pos[i*3+1]*200)+","+Math.round(pos[i*3+2]*200);let g=M.get(k);if(!g)M.set(k,g=[]);g.push(i)}
+ M.forEach(g=>{if(g.length<2)return;let x=0,y=0,z=0;for(const i of g){x+=nr[i*3];y+=nr[i*3+1];z+=nr[i*3+2]}for(const i of g){nr[i*3]=x;nr[i*3+1]=y;nr[i*3+2]=z}});
+ for(let i=0;i<n;i++){const l=Math.hypot(nr[i*3],nr[i*3+1],nr[i*3+2])||1;nr[i*3]/=l;nr[i*3+1]/=l;nr[i*3+2]/=l}
+ if(nr[vi*3]*dir[0]+nr[vi*3+1]*dir[1]+nr[vi*3+2]*dir[2]<0){for(let k=0;k<idx.length;k+=3){const t=idx[k+1];idx[k+1]=idx[k+2];idx[k+2]=t}for(let i=0;i<n*3;i++)nr[i]=-nr[i]}
+ return {pos,uv,col,nrm:nr,idx}}
+function grid_(R,C,wrap){const id=[];for(let r=0;r<R-1;r++)for(let c=0;c<C-1;c++){const a=r*C+c,b=a+1,d=a+C,e=d+1;id.push(a,b,d,b,e,d)}return new Uint32Array(id)}
+/* ---- torso ---- */
+function torso_(){const n=SM.n,Ar=cr_(SA,50),Br=cr_(SBF,50),pn=Math.asin(Math.pow(SM.nR/SM.S,n/2)),K=4000,ph=[],ar=[0],P2=Math.PI/2;
+ for(let i=0;i<=K;i++)ph.push(-P2+Math.PI*i/K);
+ for(let i=1;i<=K;i++){const p=se_(ph[i],Ar,Br),q=se_(ph[i-1],Ar,Br);ar.push(ar[i-1]+Math.hypot(p[0]-q[0],p[1]-q[1]))}
+ const arcAt=f=>{const t=(f+P2)/Math.PI*K,i=Math.min(K-1,Math.floor(t));return ar[i]+(ar[i+1]-ar[i])*(t-i)},
+  phiAt=s=>{let lo=0,hi=K;while(hi-lo>1){const m=(lo+hi)>>1;if(ar[m]<s)lo=m;else hi=m}return ph[lo]+(ph[hi]-ph[lo])*(s-ar[lo])/((ar[hi]-ar[lo])||1)},
+  F=[],seg=(a,b,N,sk)=>{const sa=arcAt(a),sb=arcAt(b);for(let i=sk?1:0;i<=N;i++)F.push(i==N?b:i==0?a:phiAt(sa+(sb-sa)*i/N))};
+ const N1=40,N2=60;seg(-P2,-pn,N1);seg(-pn,pn,N2,1);seg(pn,P2,N1,1);
+ const Nf=F.length-1,iL=N1,iR=N1+N2,NC=2*(Nf+1),Nb=60,Nd=44,R=HEM_.length+Nb+Nd,pos=new Float32Array(R*NC*3),uv=new Float32Array(R*NC*2),col=new Float32Array(R*NC*3);
+ const colOf=(f,back)=>{const xr=se_(f,Ar,Br)[0]*SM.S/Ar,ax=Math.abs(xr),inN=ax<SM.nR-1e-6,
+   yt=inN?SM.HPS-(back?SM.dropB:SM.dropF)*Math.pow(Math.max(0,1-Math.pow(ax/SM.nR,back?2:2.6)),back?1.5:1.25):SM.HPS-(ax-SM.nR)*SM.slope,
+   kN=1-ss_(ax,SM.nR*.3,SM.nR*1.6),D=SM.D*kN+13*(1-kN),
+   y0=SM.HPS-D-Math.max(0,ax-SM.nR)*SM.slope,ue=Math.max(0,Math.min(1,(yt-y0)/D)),be=Math.asin(ue),out=[];
+  const pt=(y,c,off,sh)=>{const A=cr_(SA,y),B=back?cr_(SBB,y):cr_(SBF,y),q=se_(f,A,B);let x=xr+(q[0]-xr)*c,z=SM.zs+(q[1]-SM.zs)*c;x+=off*q[2];z+=off*q[3];out.push(x,y,z,sh)};
+  for(const h of HEM_)pt(h[0],1,h[1],h[2]);
+  for(let k=1;k<=Nb;k++)pt(3.95+(y0-3.95)*k/Nb,1,0,1);
+  for(let k=1;k<=Nd;k++){const u=Math.sin(be*k/Nd);pt(y0+D*u,Math.sqrt(Math.max(0,1-u*u))*(1-.35*kN*u*u),0,1)}
+  return out};
+ const cols=[];for(let i=0;i<=Nf;i++)cols.push(colOf(F[i],false));for(let j=0;j<=Nf;j++)cols.push(colOf(Math.PI-F[Nf-j],true));
+ for(let r=0;r<R;r++)for(let c=0;c<NC;c++){const s=cols[c],k=r*NC+c;pos[k*3]=s[r*4];pos[k*3+1]=s[r*4+1];pos[k*3+2]=s[r*4+2];col[k*3]=col[k*3+1]=col[k*3+2]=s[r*4+3];uv[k*2+1]=(SM.VO+s[r*4+1])/SM.TH}
+ /* u = cm a lo largo de la tela, medidos desde el centro del frente (o de la espalda) */
+ for(let r=0;r<R;r++)for(const [o,U] of [[0,SM.UF],[Nf+1,SM.UB]]){const m=Nf/2,P=c=>(r*NC+o+c)*3,d=(a,b)=>Math.hypot(pos[P(a)]-pos[P(b)],pos[P(a)+1]-pos[P(b)+1],pos[P(a)+2]-pos[P(b)+2]);
+  uv[(r*NC+o+m)*2]=U/SM.TW;let s=0;for(let c=m+1;c<=Nf;c++){s+=d(c,c-1);uv[(r*NC+o+c)*2]=(U+s)/SM.TW}s=0;for(let c=m-1;c>=0;c--){s+=d(c,c+1);uv[(r*NC+o+c)*2]=(U-s)/SM.TW}}
+ const id=[];for(let r=0;r<R-1;r++)for(const o of [0,Nf+1])for(let c=0;c<Nf;c++){const a=r*NC+o+c,b=a+1,d=a+NC,e=d+1;id.push(a,b,d,b,e,d)}
+ const loop=[],prev=[];for(let i=iL;i<=iR;i++){loop.push((R-1)*NC+i);prev.push((R-2)*NC+i)}for(let j=Nf-iR+1;j<=Nf-iL-1;j++){loop.push((R-1)*NC+Nf+1+j);prev.push((R-2)*NC+Nf+1+j)}
+ return {m:mesh_(pos,uv,col,new Uint32Array(id),(HEM_.length+30)*NC+Nf/2,[0,0,1]),loop,prev}}
+/* ---- cuello acanalado: sube desde el borde del escote, se dobla arriba y baja por dentro ---- */
+function collar_(t){const P=t.m.pos,L=t.loop.length,st=[],T=.45,r=T/2,H=1.95;
+ [[-.6,-T,.78],[0,-T,.78],[.5,-T,.78],[1,-T,.78],[1.5,-T,.8],[H-.12,-T,.82]].forEach(s=>st.push(s));
+ for(let k=0;k<=8;k++){const a=Math.PI*k/8;st.push([H+r*Math.sin(a),-r-r*Math.cos(a),.82+.18*k/8])}
+ [[H-.15,0,1],[1.6,0,1],[1.25,0,1],[.9,0,1],[.6,0,1],[.42,0,1],[.33,-.035,1],[.26,-.05,1],[.19,-.035,1],[.1,0,1],[0,0,1]].forEach(s=>st.push(s));
+ const S=st.length,C=L+1,pos=new Float32Array(S*C*3),uv=new Float32Array(S*C*2),col=new Float32Array(S*C*3);
+ const v=i=>[P[i*3],P[i*3+1],P[i*3+2]],nl=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l]},sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+ let cxz=[0,0];for(const i of t.loop){cxz[0]+=P[i*3];cxz[1]+=P[i*3+2]}cxz=[cxz[0]/L,cxz[1]/L];
+ let arc=0;
+ for(let c=0;c<C;c++){const k=c%L,q=v(t.loop[k]),d0=nl(sub(q,v(t.prev[k]))),tg=nl(sub(v(t.loop[(k+1)%L]),v(t.loop[(k+L-1)%L]))),
+   hz=nl([q[0]-cxz[0],0,q[2]-cxz[1]]),wb=ss_(cxz[1]-q[2],-3,3),lean=.8+(.12-.8)*wb,
+   dir=nl([-hz[0]*lean,1,-hz[2]*lean]);let nn=nl(crs(tg,dir));if(nn[0]*hz[0]+nn[2]*hz[2]<0)nn=[-nn[0],-nn[1],-nn[2]];
+  if(c>0){const p=v(t.loop[(c-1)%L]);arc+=Math.hypot(q[0]-p[0],q[1]-p[1],q[2]-p[2])}
+  for(let s=0;s<S;s++){const [a,o,sh]=st[s],j=s*C+c;for(let e=0;e<3;e++)pos[j*3+e]=q[e]+dir[e]*a+nn[e]*o;uv[j*2]=arc/.3;uv[j*2+1]=a/2;col[j*3]=col[j*3+1]=col[j*3+2]=sh}}
+ const id=grid_(S,C);const q0=v(t.loop[Math.floor(L/4)]);return mesh_(pos,uv,col,id,(S-4)*C+Math.floor(L/4),nl([q0[0]-cxz[0],0,q0[2]-cxz[1]]))}
+/* ---- sisa (armhole): el borde donde se cose la manga, cortado en el torso con un plano inclinado ---- */
+const ARM={P0:[19.2,58.5,0],N:[.97014,.24254,0]};
+const armD_=(p,x)=>(x-ARM.P0[0])*ARM.N[0]+(p[1]-ARM.P0[1])*ARM.N[1];
+function armhole_(m){const P=m.pos,I=m.idx,pts=[],e1=[-.24254,.97014,0];
+ for(let k=0;k<I.length;k+=3)for(let e=0;e<3;e++){const a=I[k+e]*3,b=I[k+(e+1)%3]*3;if(P[a]<0||P[b]<0)continue;
+  const da=armD_([0,P[a+1]],P[a]),db=armD_([0,P[b+1]],P[b]);if(da*db<0){const t=da/(da-db);pts.push([P[a]+(P[b]-P[a])*t,P[a+1]+(P[b+1]-P[a+1])*t,P[a+2]+(P[b+2]-P[a+2])*t])}}
+ const C0=[0,0,0];pts.forEach(p=>{for(let e=0;e<3;e++)C0[e]+=p[e]/pts.length});
+ const pr=pts.map(p=>{const q=[p[0]-C0[0],p[1]-C0[1],p[2]-C0[2]],u=q[0]*e1[0]+q[1]*e1[1],v=q[2];return [Math.atan2(v,u),Math.hypot(u,v)]}).sort((a,b)=>a[0]-b[0]);
+ const rAt=th=>{let i=0;while(i<pr.length&&pr[i][0]<th)i++;const A=pr[(i-1+pr.length)%pr.length],B=pr[i%pr.length];let a0=A[0],a1=B[0];if(i==0)a0-=2*Math.PI;if(i==pr.length)a1+=2*Math.PI;return A[1]+(B[1]-A[1])*((th-a0)/((a1-a0)||1))};
+ /* se quita la tela del torso que queda dentro de la manga */
+ const keep=[];for(let k=0;k<I.length;k+=3){let out=0;for(let e=0;e<3;e++){const a=I[k+e]*3;if(armD_([0,P[a+1]],Math.abs(P[a]))>.02)out++}if(out<3)keep.push(I[k],I[k+1],I[k+2])}
+ m.idx=new Uint32Array(keep);
+ return {C0,e1,rAt}}
+/* ---- manga derecha (la izquierda es su espejo): nace exactamente en la sisa y termina en el puño ---- */
+function sleeve_(arm){const R0=arm.C0,C=[29.4,44.4,1.6],K=[R0[0]+5.2,R0[1]-1.6,R0[2]],bz=t=>[0,1,2].map(i=>(1-t)*(1-t)*C[i]+2*t*(1-t)*K[i]+t*t*R0[i]),N=600,pts=[bz(0)],ar=[0];
+ for(let i=1;i<=N;i++){const p=bz(i/N);pts.push(p);ar.push(ar[i-1]+Math.hypot(p[0]-pts[i-1][0],p[1]-pts[i-1][1],p[2]-pts[i-1][2]))}
+ const Lt=ar[N],at=a=>{let i=0;while(i<N-1&&ar[i+1]<a)i++;const t=(a-ar[i])/(ar[i+1]-ar[i]),p=[0,1,2].map(e=>pts[i][e]+(pts[i+1][e]-pts[i][e])*t),
+   d=[0,1,2].map(e=>pts[i+1][e]-pts[i][e]),l=Math.hypot(...d);return [p,d.map(e=>e/l)]};
+ const RX=[[0,6.3],[6,6.45],[11,7],[16,7.9],[21,8.6],[40,9]],RZ=[[0,7.6],[6,7.8],[11,8.3],[16,9],[21,9.6],[40,10]];
+ const st=HEM_.map(h=>h.slice());const Ns=44;for(let k=1;k<=Ns;k++)st.push([3.95+(Lt-3.95)*k/Ns,0,1]);
+ const S=st.length,NT=112,C2=NT+1,pos=new Float32Array(S*C2*3),uv=new Float32Array(S*C2*2),col=new Float32Array(S*C2*3);
+ for(let s=0;s<S;s++){const [a,off,sh]=st[s],[p,T]=at(Math.max(0,a)),ef0=[-T[2]*T[0],-T[2]*T[1],1-T[2]*T[2]],l=Math.hypot(...ef0),ef=ef0.map(e=>e/l),
+   eo=[T[1]*ef[2]-T[2]*ef[1],T[2]*ef[0]-T[0]*ef[2],T[0]*ef[1]-T[1]*ef[0]],rx=cr_(RX,a)+off,rz=cr_(RZ,a)+off;
+  const w=1-ss_(Lt-a,0,8.5),w2=w*w*(3-2*w);
+  for(let k=0;k<C2;k++){const th=-Math.PI+2*Math.PI*k/NT,j=s*C2+k,cs=Math.cos(th),sn=Math.sin(th),rr=w2>0?arm.rAt(th):0;
+   for(let e=0;e<3;e++){const E=p[e]+rx*cs*eo[e]+rz*sn*ef[e],Rt=arm.C0[e]+rr*(cs*arm.e1[e]+(e==2?sn:0));pos[j*3+e]=E+(Rt-E)*w2}col[j*3]=col[j*3+1]=col[j*3+2]=sh;uv[j*2+1]=(3+a)/SM.TH}
+  const m=NT/2,P=k=>(s*C2+k)*3,d=(a,b)=>Math.hypot(pos[P(a)]-pos[P(b)],pos[P(a)+1]-pos[P(b)+1],pos[P(a)+2]-pos[P(b)+2]);
+  uv[(s*C2+m)*2]=SM.UB/SM.TW;let q=0;for(let k=m+1;k<C2;k++){q+=d(k,k-1);uv[(s*C2+k)*2]=(SM.UB-q)/SM.TW}q=0;for(let k=m-1;k>=0;k--){q+=d(k,k+1);uv[(s*C2+k)*2]=(SM.UB+q)/SM.TW}}
+ const [p0,T0]=at(10),j0=(HEM_.length+15)*C2+NT/2;return mesh_(pos,uv,col,grid_(S,C2),j0,[T0[1],-T0[0],0])}
+function mirror_(a){const pos=a.pos.slice(),nrm=a.nrm.slice(),uv=a.uv.slice(),idx=a.idx.slice();
+ for(let i=0;i<pos.length;i+=3){pos[i]=-pos[i];nrm[i]=-nrm[i]}for(let i=0;i<uv.length;i+=2)uv[i]=(SM.UF-(uv[i]*SM.TW-SM.UB))/SM.TW;
+ for(let k=0;k<idx.length;k+=3){const t=idx[k+1];idx[k+1]=idx[k+2];idx[k+2]=t}return {pos,uv,col:a.col,nrm,idx}}
+let SGEO=null;
+function shirtGeo_(){if(SGEO)return SGEO;const t=torso_(),c=collar_(t),sr=sleeve_(armhole_(t.m)),sl=mirror_(sr);let lo=1e9,hi=-1e9,w=0;
+ for(const m of [t.m,c,sr])for(let i=0;i<m.pos.length;i+=3){lo=Math.min(lo,m.pos[i+1]);hi=Math.max(hi,m.pos[i+1]);w=Math.max(w,Math.abs(m.pos[i]))}
+ return SGEO={parts:[t.m,sr,sl],collar:c,yc:(lo+hi)/2,h:hi-lo,w:2*w}}
+/* logos en cm sobre la tela (mismas reglas de tamaño máximo y posición que logoLayout) */
+function logos3D_(sp){const W=TW[sp.talla]||51,s=W/51,u=W/290,q=.8,yt=49-554*q*u/2,Y=p=>yt+(p-46)*u*q,H=Y(598),out=[];
+ sp.logos.forEach(l=>{const z=lzone(l.ubic),o=lsz(l.tam);let w=o.w,h=o.h;
+  if(z.s=="sleeve"){const k=Math.min(1,13/w,14/h);w*=k;h*=k;out.push({U:z.x<0?SM.UF:SM.UB,V:3+(3.6+h/2)/s,w:w/s,h:h/s,src:l.src,pdf:l.pdf});return}
+  const st=Y(z.s=="back"?72:122)+1.5,k=Math.min(1,(W-6)/w,(H-7-st)/h);w*=k;h*=k;let cx=z.h<0?-.23*W:z.h>0?.23*W:0;cx=Math.max(-(W/2-3-w/2),Math.min(W/2-3-w/2,cx));
+  const top=z.s=="back"?SM.HPS-SM.dropB-4:SM.HPS-SM.dropF-3.4,y=z.v=="b"?(7+h/2)/s:top-(h/2)/s;
+  out.push({U:(z.s=="back"?SM.UB:SM.UF)+cx/s,V:SM.VO+y,w:w/s,h:h/s,src:l.src,pdf:l.pdf})});
+ return out}
 function pvLegend(box,spec,w){const l=box.querySelector(".pvl");if(l)l.innerHTML="Camisa "+E(spec.color)+" talla "+E(spec.talla)+" · izquierda y derecha según se ve en el dibujo."+(spec.logos.length?"<br>"+spec.logos.map((x,i)=>(i+1)+") "+E(x.ubic)+" · "+E(x.tam)).join("<br>"):"<br>Agrega un logo para verlo aquí.")+(w.length?'<br><b style="color:#b0102c">⚠ Logo '+w.join(", ")+" no cabe en esa zona: se muestra reducido.</b>":"")}
 /* posición real (en cm) de cada logo sobre la foto de frente o espalda */
 function logoLayout(side,spec){const W=TW[spec.talla]||51,u=W/290,q=.8,X=p=>45+(p-301)*u,yt=49-554*q*u/2,Y=p=>yt+(p-46)*u*q,x0=45-W/2,x1=45+W/2,H=Y(598),start=Y(side=="back"?72:122)+1.5,warn=[],items=[];
@@ -641,6 +679,17 @@ function logoLayout(side,spec){const W=TW[spec.talla]||51,u=W/290,q=.8,X=p=>45+(
   if(z.s!="sleeve"){cx=Math.max(x0+3+w/2,Math.min(x1-3-w/2,cx));cy=z.v=="b"?H-7-h/2:start+h/2}
   items.push({cx,cy,w,h,rot,src:l.src,pdf:l.pdf})});
  return {u,left:X(40),top:Y(38),items,warn}}
+/* luz de estudio suave: un cuarto gris con paneles de luz, convertido en reflejos (sin bajar archivos extra) */
+function envMap_(T,r){const pm=new T.PMREMGenerator(r),s=new T.Scene(),gs=[],ms=[];
+ const add=(g,m,p)=>{const o=new T.Mesh(g,m);o.position.set(...p);o.lookAt(0,0,0);s.add(o);gs.push(g);ms.push(m);return o};
+ add(new T.BoxGeometry(600,400,600),new T.MeshBasicMaterial({color:0x6b6e74,side:T.BackSide}),[0,0,0]);
+ for(const [w,h,k,p] of [[260,160,5,[0,190,80]],[140,220,3.2,[-260,40,120]],[140,220,1.6,[260,30,100]],[220,160,1.2,[0,40,-280]],[300,80,.9,[0,-190,60]]])
+  add(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({color:new T.Color(1,1,1).multiplyScalar(k),side:T.DoubleSide}),p);
+ const rt=pm.fromScene(s,.04);pm.dispose();gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());return rt}
+/* relieve del acanalado del cuello */
+function ribTex_(T){const c=cvs(32,4),x=c.getContext("2d"),im=x.createImageData(32,4);
+ for(let i=0;i<32;i++){const nx=Math.sin(2*Math.PI*i/32)*.7,nz=Math.sqrt(1-nx*nx);for(let j=0;j<4;j++){const p=(j*32+i)*4;im.data[p]=(nx*.5+.5)*255;im.data[p+1]=128;im.data[p+2]=(nz*.5+.5)*255;im.data[p+3]=255}}
+ x.putImageData(im,0,0);const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.colorSpace=T.NoColorSpace;return t}
 /* visores vivos: se limita a 3 a la vez y se cierran los que ya no están en pantalla (cada uno usa un contexto WebGL) */
 const GLS=new Set();setInterval(()=>{GLS.forEach(c=>{if(!c.host.isConnected)c.dispose()})},4000);
 function glView(box,spec0,onReady,onFail){
@@ -649,46 +698,39 @@ function glView(box,spec0,onReady,onFail){
  if(!renderer.getContext())return null;
  while(GLS.size>=3){const o=GLS.values().next().value;o.dispose();GLS.delete(o)}
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.75:2));
+ renderer.toneMapping=T.NeutralToneMapping;renderer.toneMappingExposure=1;
  const cv=renderer.domElement;host.appendChild(cv);
- const scene=new T.Scene(),camera=new T.PerspectiveCamera(24,1,10,1200),group=new T.Group();scene.add(group);
- scene.add(new T.HemisphereLight(0xffffff,0xc2cbe0,Math.PI*.5));
- const key=new T.DirectionalLight(0xffffff,Math.PI*.4);key.position.set(90,120,170);scene.add(key);
- const fil=new T.DirectionalLight(0xf2f5ff,Math.PI*.4);fil.position.set(-100,90,-170);scene.add(fil);
- const rim=new T.DirectionalLight(0xffffff,Math.PI*.14);rim.position.set(-160,60,60);scene.add(rim);
- const sideTex=new T.Texture();sideTex.colorSpace=T.SRGBColorSpace;let sideImg=null;
- const mk=back=>{const c=cvs(CW,CH),tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-  const inTex=new T.CanvasTexture(cvs(2,2));inTex.colorSpace=T.SRGBColorSpace;
-  const mat=new T.MeshStandardMaterial({map:tex,roughness:.96,metalness:0,side:T.DoubleSide,alphaTest:.35});
-  mat.onBeforeCompile=sh=>{sh.uniforms.tSide={value:sideTex};sh.uniforms.tIn={value:inTex};sh.uniforms.uBack={value:back?1:0};
-   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec3 vOP;varying vec3 vON;").replace("#include <begin_vertex>","#include <begin_vertex>\nvOP=position;vON=normal;");
-   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying vec3 vOP;varying vec3 vON;uniform sampler2D tSide;uniform sampler2D tIn;uniform float uBack;")
-   .replace("#include <map_fragment>",`#include <map_fragment>
-   {vec3 on=normalize(vON);float sw=.35*smoothstep(.8,.99,abs(on.x));
-    float zo=vOP.z/${ZK.toFixed(6)};float yo=323.-vOP.y/${(U0*.8).toFixed(6)};
-    vec2 suv=vec2((${SIDEC}.-zo-160.)/270.,1.-(yo-20.)/580.);vec4 sc=texture2D(tSide,suv);
-    diffuseColor.rgb=mix(diffuseColor.rgb,sc.rgb,sw*sc.a);
-    if(uBack>.5?gl_FrontFacing:!gl_FrontFacing){vec2 iu=vec2(${(.5+(0)).toFixed(1)}+(vOP.x/${U0.toFixed(6)}+${CX}.-40.)/516.-.5,vMapUv.y);vec3 ic=texture2D(tIn,iu).rgb;diffuseColor.rgb=mix(diffuseColor.rgb,ic,uBack)*.66;}}`)};
-  return {c,x:c.getContext("2d"),tex,inTex,back,key:"",mesh:null,mat}};
- const P={f:mk(false),b:mk(true)};
- let dead=false,tok=0,rot=.5,tgt=null,auto=false,tilt=.07,dirty=true,drag=null,raf=0,ready=false,cur=spec0,ro=null,io=null,on=false,vis=true,tm=0;
+ const scene=new T.Scene(),camera=new T.PerspectiveCamera(24,1,10,1200),group=new T.Group(),body=new T.Group();group.add(body);scene.add(group);
+ const env=envMap_(T,renderer);scene.environment=env.texture;
+ scene.add(new T.HemisphereLight(0xffffff,0xc4c8d0,1.05));
+ const key=new T.DirectionalLight(0xffffff,1.9);key.position.set(70,110,150);scene.add(key);
+ const fil=new T.DirectionalLight(0xf4f6ff,.55);fil.position.set(-130,30,90);scene.add(fil);
+ const rim=new T.DirectionalLight(0xffffff,.7);rim.position.set(-40,90,-170);scene.add(rim);
+ const G=shirtGeo_(),geos=[],bg=a=>{const g=new T.BufferGeometry();g.setAttribute("position",new T.BufferAttribute(a.pos,3));g.setAttribute("normal",new T.BufferAttribute(a.nrm,3));
+  g.setAttribute("uv",new T.BufferAttribute(a.uv,2));g.setAttribute("color",new T.BufferAttribute(a.col,3));g.setIndex(new T.BufferAttribute(a.idx,1));g.computeBoundingSphere();geos.push(g);return g};
+ const can=cvs(SM.TW*SM.PX,SM.TH*SM.PX),cx=can.getContext("2d"),tex=new T.CanvasTexture(can);tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+ /* el interior de la camisa se ve más oscuro, como en la realidad */
+ const dark=sh=>{sh.fragmentShader=sh.fragmentShader.replace("#include <map_fragment>","#include <map_fragment>\n\tif(!gl_FrontFacing)diffuseColor.rgb*=.6;")};
+ const rib=ribTex_(T),fab={roughness:.86,metalness:0,sheen:.6,sheenRoughness:.7,vertexColors:true,side:T.DoubleSide,envMapIntensity:.8},
+  mat=new T.MeshPhysicalMaterial({...fab,map:tex}),matC=new T.MeshPhysicalMaterial({...fab,normalMap:rib,normalScale:new T.Vector2(.4,.4)});
+ mat.onBeforeCompile=dark;matC.onBeforeCompile=dark;
+ G.parts.forEach(a=>body.add(new T.Mesh(bg(a),mat)));body.add(new T.Mesh(bg(G.collar),matC));body.position.y=-G.yc;
+ let dead=false,tok=0,rot=.5,tgt=null,auto=false,tilt=.07,dirty=true,drag=null,raf=0,ready=false,cur=spec0,ro=null,io=null,on=false,vis=true;
  function wake(){if(!raf&&on&&vis&&!dead&&!document.hidden)raf=requestAnimationFrame(frame)}
- function paint(p,side,sp){const L=logoLayout(side,sp),c=p.x,s=CW/(516*L.u);c.setTransform(1,0,0,1,0,0);c.globalCompositeOperation="source-over";c.clearRect(0,0,CW,CH);c.drawImage(p.base,0,0);c.globalCompositeOperation="source-atop";
-  L.items.forEach(it=>{c.save();c.setTransform(s,0,0,s,0,0);c.translate(it.cx-L.left,it.cy-L.top);c.rotate(it.rot*Math.PI/180);const im=it.src&&LG.get(it.src);
-   if(im){const r=Math.min(it.w/im.naturalWidth,it.h/im.naturalHeight),dw=im.naturalWidth*r,dh=im.naturalHeight*r;c.drawImage(im,-dw/2,-dh/2,dw,dh)}
-   else{c.fillStyle="rgba(245,166,35,.34)";c.fillRect(-it.w/2,-it.h/2,it.w,it.h);c.strokeStyle="#f5a623";c.lineWidth=.35;c.setLineDash([1.2,1]);c.strokeRect(-it.w/2,-it.h/2,it.w,it.h);c.setLineDash([]);c.fillStyle="#9a5b00";c.font="700 3px sans-serif";c.textAlign="center";c.fillText(it.pdf?"PDF":"logo",0,1)}
-   c.restore()});c.globalCompositeOperation="source-over";p.tex.needsUpdate=true}
- function fit(){const w=host.clientWidth||340,h=host.clientHeight||300,a=w/h,sc=group.scale.x,t=Math.tan(camera.fov*Math.PI/360),d=Math.max(GH*sc*.5*1.06/t,GW*sc*.5*.9/(t*a))+22;
+ function paint(sp){const neg=sp.color=="Negro",fc=neg?"#29292c":"#f2f2f0",P=SM.PX;
+  for(const m of [mat,matC]){m.sheenColor.set(neg?0xc4c6cc:0x9a9a9a);m.sheen=neg?.9:.6;m.roughness=neg?.78:.86;m.envMapIntensity=neg?1.25:.8}matC.color.set(fc);
+  cx.setTransform(1,0,0,1,0,0);cx.globalCompositeOperation="source-over";cx.fillStyle=fc;cx.fillRect(0,0,can.width,can.height);
+  logos3D_(sp).forEach(it=>{cx.save();cx.translate(it.U*P,(SM.TH-it.V)*P);const im=it.src&&LG.get(it.src),w=it.w*P,h=it.h*P;
+   if(im){const r=Math.min(w/im.naturalWidth,h/im.naturalHeight),dw=im.naturalWidth*r,dh=im.naturalHeight*r;cx.drawImage(im,-dw/2,-dh/2,dw,dh)}
+   else{cx.fillStyle="rgba(245,166,35,.34)";cx.fillRect(-w/2,-h/2,w,h);cx.strokeStyle="#f5a623";cx.lineWidth=.35*P;cx.setLineDash([1.2*P,P]);cx.strokeRect(-w/2,-h/2,w,h);cx.setLineDash([]);
+    cx.fillStyle="#9a5b00";cx.font="700 "+(3*P)+"px sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillText(it.pdf?"PDF":"logo",0,0)}
+   cx.restore()});tex.needsUpdate=true;matC.needsUpdate=false}
+ function fit(){const w=host.clientWidth||340,h=host.clientHeight||300,a=w/h,sc=group.scale.x,t=Math.tan(camera.fov*Math.PI/360),d=Math.max(G.h*sc*.5*1.08/t,G.w*sc*.5*1.02/(t*a))+18;
   camera.aspect=a;camera.position.set(0,0,d);camera.near=Math.max(5,d-120);camera.far=d+220;camera.lookAt(0,0,0);camera.updateProjectionMatrix()}
- async function fill(sp){cur=sp;const my=++tok,k=sp.color=="Negro"?"b":"w";group.scale.setScalar((TW[sp.talla]||51)/51);
-  try{const [fi,bi,si,wf]=await Promise.all([pic(SH[k+"f"]),pic(SH[k+"b"]),pic(SH[k+"s"]),pic(SH.wf)]);
-   await Promise.all([...new Set(sp.logos.map(l=>l.src).filter(Boolean))].map(async s=>{try{LG.set(s,await pic(s,/^https?:/i.test(s)))}catch(e){console.warn("No se pudo cargar un logo en el visor; se muestra su marcador.",e)}}));
+ async function fill(sp){cur=sp;const my=++tok;group.scale.setScalar((TW[sp.talla]||51)/51);
+  try{await Promise.all([...new Set(sp.logos.map(l=>l.src).filter(Boolean))].map(async s=>{try{LG.set(s,await pic(s,/^https?:/i.test(s)))}catch(e){console.warn("No se pudo cargar un logo en el visor; se muestra su marcador.",e)}}));
    if(dead||my!=tok)return;
-   const prof=profile(await pic(SH.ws));
-   if(!BASE[k+"f"]){const f=prep(fi,holeMask(wf)),b=prep(bi,null);BASE[k+"f"]=f.c;BASE[k+"i"]=f.i;BASE[k+"b"]=b.c}
-   if(sideImg!==si){sideImg=si;sideTex.image=si;sideTex.needsUpdate=true}
-   for(const [p,kk,img,back] of [[P.f,k+"f",fi,false],[P.b,k+"b",bi,true]]){if(p.key!=kk){const g=geom(T,kk,img,back,prof);if(p.mesh){p.mesh.geometry.dispose();p.mesh.geometry=g}else{p.mesh=new T.Mesh(g,p.mat);group.add(p.mesh)}p.key=kk;p.base=BASE[kk]}}
-   const it=P.b.inTex;if(it.image!==BASE[k+"i"]){it.image=BASE[k+"i"];it.needsUpdate=true}
-   paint(P.f,"front",sp);paint(P.b,"back",sp);
+   paint(sp);
    pvLegend(box,sp,[...new Set(logoLayout("front",sp).warn.concat(logoLayout("back",sp).warn))]);
    fit();dirty=true;wake();if(!ready){ready=true;onReady(ctl)}
   }catch(e){console.warn("Visor 3D:",e);if(!dead){ctl.dispose();onFail()}}}
@@ -698,20 +740,20 @@ function glView(box,spec0,onReady,onFail){
   if(auto&&!drag){rot+=.011;busy=true}else if(tgt!=null&&!drag){const d=tgt-rot;rot+=d*.14;busy=true;if(Math.abs(d)<.003){rot=tgt;tgt=null;busy=false}}
   if(dirty||busy){dirty=false;group.rotation.set(tilt,rot,0);renderer.render(scene,camera)}
   if(busy||drag||dirty)raf=requestAnimationFrame(frame)}
- const ANG={f:0,b:Math.PI,l:.95,r:-.95};
+ const ANG={f:0,b:Math.PI,l:1.2,r:-1.2};
  host.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};auto=false;tgt=null;host.classList.add("gb");try{host.setPointerCapture(e.pointerId)}catch(z){}wake()};
  host.onpointermove=e=>{if(!drag)return;rot+=(e.clientX-drag.x)*.011;tilt=Math.max(-.1,Math.min(.4,tilt+(e.clientY-drag.y)*.004));drag.x=e.clientX;drag.y=e.clientY;dirty=true;wake()};
  host.onpointerup=host.onpointercancel=()=>{drag=null;host.classList.remove("gb")};
  host.onkeydown=e=>{const m={ArrowLeft:-.2,ArrowRight:.2}[e.key];if(m!=null){e.preventDefault();auto=false;tgt=null;rot+=m;dirty=true;wake()}};
  cv.addEventListener("webglcontextlost",e=>{e.preventDefault();if(!dead){ctl.dispose();onFail()}});
- const ctl={host,fill,dbg:()=>({P,scene,camera,renderer,group}),
+ const ctl={host,fill,dbg:()=>({scene,camera,renderer,group,G}),
   go(k){auto=false;tilt=.07;const a=ANG[k];tgt=a+2*Math.PI*Math.round((rot-a)/(2*Math.PI));dirty=true;wake()},
   spin(){auto=!auto;tgt=null;dirty=true;wake()},
   view(r,t){auto=false;tgt=null;rot=r;tilt=t==null?tilt:t;dirty=true;wake()},
   start(){on=true;GLS.add(ctl);ro=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);fit();dirty=true;wake()});ro.observe(host);
    if("IntersectionObserver" in window){io=new IntersectionObserver(es=>{vis=es[0].isIntersecting;if(vis){dirty=true;wake()}});io.observe(host)}
    const w=host.clientWidth,h=host.clientHeight;if(w&&h){renderer.setSize(w,h,false);fit()}dirty=true;wake()},
-  dispose(){if(dead)return;dead=true;GLS.delete(ctl);cancelAnimationFrame(raf);if(ro)ro.disconnect();if(io)io.disconnect();[P.f,P.b].forEach(p=>{if(p.mesh)p.mesh.geometry.dispose();p.mat.dispose();p.tex.dispose();p.inTex.dispose()});sideTex.dispose();renderer.dispose();try{renderer.forceContextLoss()}catch(e){}cv.remove()}};
+  dispose(){if(dead)return;dead=true;GLS.delete(ctl);cancelAnimationFrame(raf);if(ro)ro.disconnect();if(io)io.disconnect();geos.forEach(g=>g.dispose());[mat,matC].forEach(m=>m.dispose());[tex,rib].forEach(t=>t.dispose());env.dispose();renderer.dispose();try{renderer.forceContextLoss()}catch(e){}cv.remove()}};
  fill(spec0);return ctl}
 function pvFill(box,spec){box._spec=spec;if(box.querySelector(".stage:not(.glw)"))pvFillCss(box,spec);if(box._gl)box._gl.fill(spec)}
 function pvMount(box,spec){if(box._gl){box._gl.dispose();box._gl=null}
