@@ -322,10 +322,10 @@ ${st?`<div><label>Encargado del pedido</label><select id="${p}e"></select></div>
 const TEL="50370407489";let ACT=null;
 const chips=(cls,vals,lab)=>`<div class="chs">${vals.map((v,i)=>`<button type="button" class="chp${i?"":" on"}" data-set="${cls}" data-v="${E(v)}">${lab?lab(v):E(v)}</button>`).join("")}</div>`;
 const swatch=v=>`<span class="swc" style="background:${v=="Negro"?"linear-gradient(135deg,#3a3a42,#0d0d10)":"linear-gradient(135deg,#fff,#e6e6ea)"}"></span>${E(v)}`;
-function camRow(){return `<div class="cam"><div class="hd"><b class="cn"></b><button type="button" class="b o s" data-x="cam" title="Quitar esta camisa">✕ Quitar camisa</button></div>
+function camRow(p){return `<div class="cam"><div class="hd"><b class="cn"></b><button type="button" class="b o s" data-x="cam" title="Quitar esta camisa">✕ Quitar camisa</button></div>
 <div class="opt"><label>Color</label>${chips("co",CFG.colores,swatch)}<select class="co hid">${O(CFG.colores)}</select></div>
 <div class="opt"><label>Talla</label>${chips("ta",CFG.tallas)}<select class="ta hid">${O(CFG.tallas)}</select></div>
-<div class="opt"><label>Cantidad</label><div class="qt"><button type="button" class="b o s" data-qn="-1">−</button><input class="qn" type="number" min="1" value="1" title="Cantidad"><button type="button" class="b o s" data-qn="1">+</button></div></div>
+${p=="p"?`<input class="qn" type="hidden" value="1">`:`<div class="opt"><label>Cantidad</label><div class="qt"><button type="button" class="b o s" data-qn="-1">−</button><input class="qn" type="number" min="1" value="1" title="Cantidad"><button type="button" class="b o s" data-qn="1">+</button></div></div>`}
 <div class="lgw"></div><div class="r"><button type="button" class="b o s" data-a="logo">+ Agregar logo a esta camisa</button><button type="button" class="b o s pvb" data-a="pv">👁 Ver cómo queda (3D)</button></div><div class="pv hide"></div></div>`}
 function logoRow(){return `<div class="lg"><div class="lh"><b class="ln2"></b><button type="button" class="b o s" data-x="lg" title="Quitar logo">✕</button></div>
 <div class="opt"><label>Ubicación</label><button type="button" class="b o pl" data-a="place">📍 <span>${E(CFG.ubic[0])}</span> ▾</button><select class="ub hid">${O(CFG.ubic)}</select></div>
@@ -335,14 +335,14 @@ function calc(p){const b=$(p+"box");let tot=0,n=0,h="";
  [...b.querySelectorAll(".cam")].forEach((c,i)=>{c.querySelector(".cn").textContent="Camisa "+(i+1);
   c.querySelectorAll(".lg").forEach((r,j)=>{r.querySelector(".ln2").textContent="Logo "+(j+1)});
   const q=Math.max(1,+c.querySelector(".qn").value||1),lp=[...c.querySelectorAll(".tm")].reduce((a,x)=>a+(CFG.logos.find(l=>l.id==x.value)||{p:0}).p,0),sub=q*(CFG.precio+lp);tot+=sub;n+=q;
-  h+=`<div>Camisa ${i+1}: ${q} × (${M(CFG.precio)} + logos ${M(lp)}) = ${M(sub)}</div>`});
+  h+=p=="p"?`<div>Camisa ${i+1}: ${M(CFG.precio)} + logos ${M(lp)} = ${M(sub)}</div>`:`<div>Camisa ${i+1}: ${q} × (${M(CFG.precio)} + logos ${M(lp)}) = ${M(sub)}</div>`});
  $(p+"tt").innerHTML=h+`<div style="margin-top:6px">${n} camisa(s) · Total <b>${M(tot)}</b></div>`}
 function wire(p,fn){const b=$(p+"box"),refresh=c=>{calc(p);pvRef(c);if(p=="p")pubPv(c)};
  b.addEventListener("click",e=>{const t=e.target,cm=t.closest(".cam"),sb=t.closest("[data-set]"),nb=t.closest("[data-qn]"),ab=t.closest("[data-a]"),xb=t.closest("[data-x]");
   if(sb){const sc=sb.closest(".lg")||cm,sel=sc.querySelector("select."+sb.dataset.set);sel.value=sb.dataset.v;sb.parentElement.querySelectorAll(".chp").forEach(x=>x.classList.toggle("on",x===sb));sel.dispatchEvent(new Event("input",{bubbles:true}));return}
   if(nb){const q=cm.querySelector(".qn");q.value=Math.max(1,(+q.value||1)+ +nb.dataset.qn);q.dispatchEvent(new Event("input",{bubbles:true}));return}
   if(ab){const k=ab.dataset.a;
-   if(k=="cam"){$(p+"cm").insertAdjacentHTML("beforeend",camRow());ACT=$(p+"cm").lastElementChild;refresh(ACT)}
+   if(k=="cam"){$(p+"cm").insertAdjacentHTML("beforeend",camRow(p));ACT=$(p+"cm").lastElementChild;refresh(ACT)}
    else if(k=="logo"){cm.querySelector(".lgw").insertAdjacentHTML("beforeend",logoRow());refresh(cm)}
    else if(k=="pv"){const pv=cm.querySelector(".pv");if(pv.classList.toggle("hide")===false)pvMount(pv,specFromCam(cm))}
    else if(k=="place")placePick(ab.closest(".lg"),refresh,cm);
@@ -350,7 +350,7 @@ function wire(p,fn){const b=$(p+"box"),refresh=c=>{calc(p);pvRef(c);if(p=="p")pu
   if(xb){if(xb.dataset.x=="lg"){xb.closest(".lg").remove();refresh(cm)}else if(b.querySelectorAll(".cam").length>1){const c=xb.closest(".cam");c.remove();if(ACT===c)ACT=null;refresh(b.querySelector(".cam"))}}
   else if(cm&&p=="p")pubPv(cm)});
  b.addEventListener("input",e=>{const c=e.target.closest(".cam");calc(p);pvRef(c,p!="p"&&e.target.classList.contains("fi"));if(p=="p")pubPv(c)});
- $(p+"cm").innerHTML=camRow();calc(p);$(p+"b").onclick=()=>fn(p)}
+ $(p+"cm").innerHTML=camRow(p);calc(p);$(p+"b").onclick=()=>fn(p)}
 function pubPv(c){const b=$("pbox"),pv=$("ppv");if(!b||!pv)return;c=(c&&c.isConnected&&c)||(ACT&&ACT.isConnected&&ACT)||b.querySelector(".cam");if(!c)return;ACT=c;
  const all=[...b.querySelectorAll(".cam")];all.forEach(x=>x.classList.toggle("act",x===c));
  const sp=specFromCam(c);if(!pv.querySelector(".stage"))pvMount(pv,sp);else pvFill(pv,sp);
@@ -365,7 +365,7 @@ async function readF(p){const b=$(p+"box"),rows=[...b.querySelectorAll(".lg")];
   camisas:[...b.querySelectorAll(".cam")].map(c=>({color:c.querySelector(".co").value,talla:c.querySelector(".ta").value,cantidad:+c.querySelector(".qn").value||1,
    logos:[...c.querySelectorAll(".lg")].map(r=>({ubic:r.querySelector(".ub").value,tam:r.querySelector(".tm").value}))}))},
   arch:await Promise.all(rows.map(r=>fileB(r.querySelector(".fi"))))}}
-function clear(p){["n","t","d"].forEach(i=>$(p+i).value="");$(p+"cm").innerHTML=camRow();calc(p);if(p=="p"){ACT=null;pubPv()}}
+function clear(p){["n","t","d"].forEach(i=>$(p+i).value="");$(p+"cm").innerHTML=camRow(p);calc(p);if(p=="p"){ACT=null;pubPv()}}
 /* ---- Público ---- */
 async function enviar(p){const m=p=="p"?"pm":"sm";let x;try{x=await readF(p)}catch(e){return msg(m,E(e.message),1)}
  if(!x.d.cliente||!x.d.telefono)return msg(m,"Escribe el nombre y el teléfono.",1);
