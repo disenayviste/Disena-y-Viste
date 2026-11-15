@@ -430,9 +430,13 @@ $("lb").onclick=async()=>{let r;
 $("lo").onclick=()=>{T=null;$("panel").classList.add("hide");$("lg").classList.remove("hide");$("lp").value=""};
 function vista(v){["v1","v2","v3","v4","v5","v6"].forEach(x=>$(x).classList.toggle("hide",x!=v));document.querySelectorAll("[data-v]").forEach(b=>{b.classList.toggle("on",b.dataset.v==v);b.classList.toggle("o",b.dataset.v!=v)});if(v=="v3")rep();if(v=="v4")emps();if(v=="v5")full();if(v=="v6")finLoad()}
 document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>vista(b.dataset.v));
-async function names(){try{NAMES=await run("nombres",{token:T})}catch(e){}if($("se")){if(ROL=="empleado"){$("se").innerHTML="<option>"+E(ME)+"</option>";$("se").disabled=true}else{$("se").innerHTML=optR("");$("se").disabled=false}}const v=$("fr").value;
- $("fr").innerHTML='<option value="*">Todos los encargados</option><option value="__yo">Mis pedidos</option><option value="__no">Sin asignar</option>'+NAMES.map(n=>`<option>${E(n)}</option>`).join("");$("fr").value=v||"*"}
-const optR=s=>'<option value="">— Sin asignar —</option>'+NAMES.map(n=>`<option ${n==s?"selected":""}>${E(n)}</option>`).join("")+(s&&!NAMES.includes(s)?`<option selected>${E(s)}</option>`:"");
+/* EMPS = solo las personas con rol "empleado": son a quienes se les asignan pedidos. Si el script aún no tiene "equipo", se usan todos los nombres. */
+let EMPS=[];
+async function names(){try{NAMES=await run("nombres",{token:T})}catch(e){}
+ try{const eq=await run("equipo",{token:T});EMPS=eq.filter(x=>x.rol=="empleado").map(x=>x.n)}catch(e){EMPS=NAMES.slice()}
+ if($("se")){if(ROL=="empleado"){$("se").innerHTML="<option>"+E(ME)+"</option>";$("se").disabled=true}else{$("se").innerHTML=optR("");$("se").disabled=false}}const v=$("fr").value;
+ $("fr").innerHTML='<option value="*">Todos los encargados</option><option value="__yo">Mis pedidos</option><option value="__no">Sin asignar</option>'+EMPS.map(n=>`<option>${E(n)}</option>`).join("");$("fr").value=v||"*";if($("fr").value!=(v||"*"))$("fr").value="*";if(L.length)draw()}
+const optR=s=>'<option value="">— Sin asignar —</option>'+EMPS.map(n=>`<option ${n==s?"selected":""}>${E(n)}</option>`).join("")+(s&&!EMPS.includes(s)?`<option selected>${E(s)}</option>`:"");
 
 async function load(){$("ct").textContent="Cargando…";try{L=await run("listar",{token:T});draw();if(!$("v3").classList.contains("hide"))rep();if(!$("v6").classList.contains("hide"))finRender()}catch(e){$("ls").innerHTML='<div class="m er">No se pudieron cargar los pedidos: '+E(e.message||e)+'</div>';$("ct").textContent=""}}
 $("rf").onclick=load;$("bq").oninput=draw;$("fl").onchange=draw;$("fr").onchange=draw;
@@ -459,7 +463,7 @@ const OPEN=new Set();
 $("ls").addEventListener("toggle",e=>{const d=e.target;if(!d.classList||!d.classList.contains("ord"))return;if(d.open){OPEN.add(d.dataset.cd);hydrate(d)}else OPEN.delete(d.dataset.cd)},true);
 /* Carga de trabajo: pedidos abiertos (aún no entregados) por encargado. Tocar una tarjeta filtra la lista. */
 function workload(){const w=$("wk");if(!w)return;const ab=L.filter(p=>p.estado<4),cnt={},tot={};
- NAMES.forEach(n=>{cnt[n]=0;tot[n]=0});L.forEach(p=>{if(p.enc){tot[p.enc]=(tot[p.enc]||0)+1;if(cnt[p.enc]==null)cnt[p.enc]=0}});ab.forEach(p=>{if(p.enc)cnt[p.enc]++});
+ EMPS.forEach(n=>{cnt[n]=0;tot[n]=0});L.forEach(p=>{if(p.enc&&cnt[p.enc]!=null)tot[p.enc]++});ab.forEach(p=>{if(p.enc&&cnt[p.enc]!=null)cnt[p.enc]++});
  const sin=ab.filter(p=>!p.enc).length,cur=$("fr").value,mx=Math.max(1,...Object.values(cnt),sin),
   chip=(v,nm,n,sub,cls)=>`<button type="button" class="wkc${cur==v?" on":""}${cls?" "+cls:""}" data-wk="${E(v)}"><span class="wkn">${E(nm)}</span><b>${n}</b><span class="wks">${sub}</span><i style="width:${Math.round(100*n/mx)}%"></i></button>`;
  w.innerHTML=`<div class="wkh"><b>Pedidos abiertos por encargado</b><span class="mu">${ab.length} sin entregar · toca para filtrar</span></div><div class="wkg">`+
