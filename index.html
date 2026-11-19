@@ -226,6 +226,10 @@ details.ord[open]>summary{border-bottom:1px solid var(--bd)}details.ord>:not(sum
 .ord .os{display:flex;flex-direction:column;min-width:130px;flex:1 1 150px;line-height:1.3}.ord .os span{font-size:13px;color:var(--mu)}
 .ord .est{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:#eef2fa;color:#142653;white-space:nowrap}
 .ord .est.e1,.ord .est.e2{background:#fff3cd;color:#8a6100}.ord .est.e3{background:#e3ecff;color:#17449c}.ord .est.e4{background:#dff5ea;color:#0f7a4f}
+/* Camisas por entregar, por color y talla */
+.sp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 10px}.sph{font-weight:700;color:#142653;font-size:14px}
+.spc{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--bd);border-radius:999px;padding:5px 12px 5px 8px;font-size:14px;color:#19243b}
+.spc b{font-size:16px;color:#142653}.spc small{color:var(--mu);font-size:12px;margin-left:4px;padding-left:8px;border-left:1px solid var(--bd)}.spc .swc{margin:0;width:18px;height:18px;box-shadow:inset 0 0 0 1px #0003;border:0}
 /* Carga de trabajo por encargado */
 .wk{margin:4px 0 12px}.wkh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:14px;color:#142653}
 .wkg{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
@@ -430,10 +434,10 @@ $("lb").onclick=async()=>{let r;
 $("lo").onclick=()=>{T=null;$("panel").classList.add("hide");$("lg").classList.remove("hide");$("lp").value=""};
 function vista(v){["v1","v2","v3","v4","v5","v6"].forEach(x=>$(x).classList.toggle("hide",x!=v));document.querySelectorAll("[data-v]").forEach(b=>{b.classList.toggle("on",b.dataset.v==v);b.classList.toggle("o",b.dataset.v!=v)});if(v=="v3")rep();if(v=="v4")emps();if(v=="v5")full();if(v=="v6")finLoad()}
 document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>vista(b.dataset.v));
-/* EMPS = solo las personas con rol "empleado": son a quienes se les asignan pedidos. Si el script aún no tiene "equipo", se usan todos los nombres. */
+/* EMPS = personas a quienes se les asignan pedidos: rol "empleado" + las que el script marca con asig (TAMBIEN_RECIBEN_PEDIDOS en Code.gs). Si el script aún no tiene "equipo", se usan todos los nombres. */
 let EMPS=[];
 async function names(){try{NAMES=await run("nombres",{token:T})}catch(e){}
- try{const eq=await run("equipo",{token:T});EMPS=eq.filter(x=>x.rol=="empleado").map(x=>x.n)}catch(e){EMPS=NAMES.slice()}
+ try{const eq=await run("equipo",{token:T});EMPS=eq.filter(x=>x.asig||x.rol=="empleado").map(x=>x.n)}catch(e){EMPS=NAMES.slice()}
  if($("se")){if(ROL=="empleado"){$("se").innerHTML="<option>"+E(ME)+"</option>";$("se").disabled=true}else{$("se").innerHTML=optR("");$("se").disabled=false}}const v=$("fr").value;
  $("fr").innerHTML='<option value="*">Todos los encargados</option><option value="__yo">Mis pedidos</option><option value="__no">Sin asignar</option>'+EMPS.map(n=>`<option>${E(n)}</option>`).join("");$("fr").value=v||"*";if($("fr").value!=(v||"*"))$("fr").value="*";if(L.length)draw()}
 const optR=s=>'<option value="">— Sin asignar —</option>'+EMPS.map(n=>`<option ${n==s?"selected":""}>${E(n)}</option>`).join("")+(s&&!EMPS.includes(s)?`<option selected>${E(s)}</option>`:"");
@@ -470,9 +474,16 @@ function workload(){const w=$("wk");if(!w)return;const ab=L.filter(p=>p.estado<4
   Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||a.localeCompare(b)).map(n=>chip(n,n,cnt[n],"abiertos · "+tot[n]+" en total")).join("")+
   chip("__no","Sin asignar",sin,"esperan encargado",sin?"warn":"")+`</div>`}
 $("wk").addEventListener("click",e=>{const b=e.target.closest("[data-wk]");if(!b)return;const v=b.dataset.wk;$("fr").value=$("fr").value==v?"*":v;if($("fr").value!=v&&$("fr").value!="*"){$("fr").value="*"}draw()});
+/* Camisas por hacer: suma la cantidad de cada camisa de los pedidos aún no entregados, por color y talla.
+   Sigue la búsqueda y el filtro de encargado; un pedido entregado deja de contar. */
+function shirtsPend(ps){const c={};ps.forEach(p=>(p.camisas||[]).forEach(x=>{const k=x.color||"Otro",o=c[k]=c[k]||{n:0,t:{}},q=+x.cantidad||0;o.n+=q;o.t[x.talla]=(o.t[x.talla]||0)+q}));
+ const cols=CFG.colores.filter(k=>c[k]).concat(Object.keys(c).filter(k=>!CFG.colores.includes(k)));
+ const chip=k=>{const o=c[k],tl=CFG.tallas.filter(t=>o.t[t]).map(t=>`${E(t)} ${o.t[t]}`).concat(Object.keys(o.t).filter(t=>!CFG.tallas.includes(t)).map(t=>`${E(t||"?")} ${o.t[t]}`)).join(" · ");
+  return `<span class="spc"><span class="swc" style="background:${k=="Negro"?"linear-gradient(135deg,#3a3a42,#0d0d10)":k=="Blanco"?"linear-gradient(135deg,#fff,#e6e6ea)":"#ccc"}"></span><b>${o.n}</b> ${E(k=="Negro"?"negras":k=="Blanco"?"blancas":k)}<small>${tl}</small></span>`};
+ return `<div class="sp"><span class="sph">Camisas por entregar:</span>${cols.length?cols.map(chip).join(""):'<span class="mu">ninguna 🎉</span>'}</div>`}
 function draw(){workload();const q=$("bq").value.toLowerCase(),f=+$("fl").value,r=$("fr").value||"*";
  const a=L.filter(p=>(f<0||p.estado==f)&&(p.codigo+p.cliente).toLowerCase().includes(q)&&(r=="*"||(r=="__no"?!p.enc:r=="__yo"?p.enc==ME:p.enc==r)));
- $("ct").textContent=a.length+" pedido(s) · toca un pedido para ver todos sus detalles";$("ls").innerHTML=a.map(card).join("")||'<div class="c mu">Sin pedidos.</div>';$("ls").querySelectorAll("details.ord[open]").forEach(hydrate)}
+ $("ct").innerHTML=E(a.length+" pedido(s) · toca un pedido para ver todos sus detalles")+shirtsPend(L.filter(p=>p.estado<4&&(p.codigo+p.cliente).toLowerCase().includes(q)&&(r=="*"||(r=="__no"?!p.enc:r=="__yo"?p.enc==ME:p.enc==r))));$("ls").innerHTML=a.map(card).join("")||'<div class="c mu">Sin pedidos.</div>';$("ls").querySelectorAll("details.ord[open]").forEach(hydrate)}
 $("ls").addEventListener("change",async e=>{const t=e.target;try{if(t.dataset.e)await run("cambiarEstado",{token:T,codigo:t.dataset.e,estado:+t.value});else if(t.dataset.r)await run("asignar",{token:T,codigo:t.dataset.r,enc:t.value});else return;load()}catch(x){alert(x.message||"Error");load()}});
 /* Los comprobantes de pago son privados en Drive: se piden al servidor con la sesión del empleado */
 function verDoc(id){const w=window.open("","_blank");if(w)w.document.write("Cargando archivo…");
